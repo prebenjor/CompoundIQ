@@ -119,6 +119,11 @@ const translations = {
     'footer-terms':          'Vilkår',
     'footer-cookies':        'Informasjonskapsler',
     'footer-copyright':      '© 2026 CompoundIQ. Alle rettigheter forbeholdt.',
+    'cookie-title':          'Vi bruker informasjonskapsler',
+    'cookie-desc':           'Vi bruker nødvendige informasjonskapsler for at tjenesten skal fungere. Med ditt samtykke bruker vi også analyse- og ytelseskapsler for å forbedre opplevelsen.',
+    'cookie-policy-link':    'Les mer',
+    'cookie-necessary':      'Kun nødvendige',
+    'cookie-accept-all':     'Godta alle',
   },
   en: {
     'page-title':            'CompoundIQ — Invest smarter in the Norwegian market',
@@ -235,6 +240,11 @@ const translations = {
     'footer-terms':          'Terms of Service',
     'footer-cookies':        'Cookie Policy',
     'footer-copyright':      '© 2026 CompoundIQ. All rights reserved.',
+    'cookie-title':          'We use cookies',
+    'cookie-desc':           'We use necessary cookies to make our service work. With your consent, we also use analytics and performance cookies to improve your experience.',
+    'cookie-policy-link':    'Learn more',
+    'cookie-necessary':      'Necessary only',
+    'cookie-accept-all':     'Accept all',
   }
 };
 
@@ -488,13 +498,40 @@ fadeStyle.textContent = `
 `;
 document.head.appendChild(fadeStyle);
 
+// === Cookie Consent ===
+const COOKIE_KEY = 'ciq-cookie-consent';
+
+function initCookieBanner() {
+  const banner = document.getElementById('cookieBanner');
+  if (!banner) return;
+
+  // Already consented — don't show
+  if (localStorage.getItem(COOKIE_KEY)) return;
+
+  // Show after a short delay so the page renders first
+  setTimeout(() => banner.classList.add('visible'), 800);
+
+  document.getElementById('cookieAcceptAll').addEventListener('click', () => {
+    localStorage.setItem(COOKIE_KEY, 'all');
+    banner.classList.remove('visible');
+    // TODO: initialise analytics/performance scripts here when ready
+  });
+
+  document.getElementById('cookieNecessary').addEventListener('click', () => {
+    localStorage.setItem(COOKIE_KEY, 'necessary');
+    banner.classList.remove('visible');
+  });
+}
+
 // === Init ===
 window.addEventListener('DOMContentLoaded', () => {
   initLangToggles();
   setLanguage(currentLang);
+  initCookieBanner();
 });
 
 if (document.readyState !== 'loading') {
   initLangToggles();
   setLanguage(currentLang);
+  initCookieBanner();
 }
