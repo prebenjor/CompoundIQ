@@ -1,0 +1,12 @@
+name = "compoundiq"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+main = ".open-next/worker.js"
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# [vars]
+# Add non-secret public env vars here.
+# Secrets (SUPABASE_SERVICE_ROLE_KEY) go in Cloudflare dashboard → Settings → Variables
