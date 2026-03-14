@@ -17,6 +17,7 @@
 # cloudflare
 /.vercel/
 /.wrangler/
+/.open-next/
 
 # misc
 .DS_Store
