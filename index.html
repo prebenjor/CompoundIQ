@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="no">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CompoundIQ — Grow Smarter, Invest Wiser</title>
+  <title>CompoundIQ — Invester smartere i det norske markedet</title>
   <link rel="stylesheet" href="styles/main.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,14 +19,18 @@
         CompoundIQ
       </a>
       <ul class="nav-links">
-        <li><a href="#features">Features</a></li>
-        <li><a href="#calculator">Calculator</a></li>
-        <li><a href="#pricing">Pricing</a></li>
-        <li><a href="#testimonials">Testimonials</a></li>
+        <li><a href="#features" data-i18n="nav-features">Funksjoner</a></li>
+        <li><a href="#calculator" data-i18n="nav-calculator">Kalkulator</a></li>
+        <li><a href="#pricing" data-i18n="nav-pricing">Priser</a></li>
       </ul>
       <div class="nav-cta">
-        <a href="#" class="btn btn-ghost">Log In</a>
-        <a href="#" class="btn btn-primary">Get Started Free</a>
+        <button class="lang-toggle" id="langToggle" aria-label="Toggle language">
+          <span class="lang-option" data-lang="no">NO</span>
+          <span class="lang-sep">|</span>
+          <span class="lang-option" data-lang="en">EN</span>
+        </button>
+        <a href="#" class="btn btn-ghost" data-i18n="nav-login">Logg inn</a>
+        <a href="#" class="btn btn-primary" data-i18n="nav-get-started">Kom i gang gratis</a>
       </div>
       <button class="hamburger" id="hamburger" aria-label="Toggle menu">
         <span></span><span></span><span></span>
@@ -37,11 +41,17 @@
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
     <ul>
-      <li><a href="#features">Features</a></li>
-      <li><a href="#calculator">Calculator</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li><a href="#testimonials">Testimonials</a></li>
-      <li><a href="#" class="btn btn-primary btn-full">Get Started Free</a></li>
+      <li><a href="#features" data-i18n="nav-features">Funksjoner</a></li>
+      <li><a href="#calculator" data-i18n="nav-calculator">Kalkulator</a></li>
+      <li><a href="#pricing" data-i18n="nav-pricing">Priser</a></li>
+      <li>
+        <button class="lang-toggle lang-toggle-mobile" id="langToggleMobile" aria-label="Toggle language">
+          <span class="lang-option" data-lang="no">NO</span>
+          <span class="lang-sep">|</span>
+          <span class="lang-option" data-lang="en">EN</span>
+        </button>
+      </li>
+      <li><a href="#" class="btn btn-primary btn-full" data-i18n="nav-get-started">Kom i gang gratis</a></li>
     </ul>
   </div>
 
@@ -54,34 +64,33 @@
     <div class="container hero-inner">
       <div class="hero-badge">
         <span class="badge-dot"></span>
-        Trusted by 50,000+ investors worldwide
+        <span data-i18n="hero-badge">Bygget for det norske markedet</span>
       </div>
       <h1 class="hero-title">
-        Make Your Money<br />
-        <span class="gradient-text">Work Smarter</span>
+        <span data-i18n="hero-title-line1">Invester smartere</span><br />
+        <span class="gradient-text" data-i18n="hero-title-line2">i Norge</span>
       </h1>
-      <p class="hero-subtitle">
-        CompoundIQ gives you powerful tools to visualize, track, and optimize your
-        investments — so compound interest works for you, not against you.
+      <p class="hero-subtitle" data-i18n="hero-subtitle">
+        CompoundIQ gir deg kraftige verktøy for å visualisere og optimere investeringene dine — med integrasjoner mot Nordnet, Oslo Børs og norske finansnyheter.
       </p>
       <div class="hero-actions">
-        <a href="#calculator" class="btn btn-primary btn-lg">Try the Calculator</a>
-        <a href="#features" class="btn btn-outline btn-lg">See How It Works</a>
+        <a href="#calculator" class="btn btn-primary btn-lg" data-i18n="hero-cta-primary">Prøv kalkulatoren</a>
+        <a href="#features" class="btn btn-outline btn-lg" data-i18n="hero-cta-secondary">Se hvordan det fungerer</a>
       </div>
-      <div class="hero-stats">
-        <div class="stat">
-          <span class="stat-number">$2.4B+</span>
-          <span class="stat-label">Assets Tracked</span>
+      <div class="hero-highlights">
+        <div class="highlight-item">
+          <span class="highlight-icon">&#128200;</span>
+          <span data-i18n="highlight-1">Oslo Børs &amp; OBX</span>
         </div>
-        <div class="stat-divider"></div>
-        <div class="stat">
-          <span class="stat-number">50K+</span>
-          <span class="stat-label">Active Users</span>
+        <div class="highlight-divider"></div>
+        <div class="highlight-item">
+          <span class="highlight-icon">&#128279;</span>
+          <span data-i18n="highlight-2">Nordnet-integrasjon</span>
         </div>
-        <div class="stat-divider"></div>
-        <div class="stat">
-          <span class="stat-number">4.9★</span>
-          <span class="stat-label">Average Rating</span>
+        <div class="highlight-divider"></div>
+        <div class="highlight-item">
+          <span class="highlight-icon">&#127981;</span>
+          <span data-i18n="highlight-3">ASK &amp; BSU-optimering</span>
         </div>
       </div>
     </div>
@@ -91,47 +100,43 @@
   <section class="features section" id="features">
     <div class="container">
       <div class="section-header">
-        <p class="section-tag">Features</p>
-        <h2 class="section-title">Everything you need to grow wealth</h2>
-        <p class="section-subtitle">
-          From simple calculators to advanced portfolio analytics — CompoundIQ has the
-          tools serious investors rely on.
+        <p class="section-tag" data-i18n="features-tag">Funksjoner</p>
+        <h2 class="section-title" data-i18n="features-title">Alt du trenger for å vokse formuen din</h2>
+        <p class="section-subtitle" data-i18n="features-subtitle">
+          Fra enkle kalkulatorer til avansert porteføljeanalyse — tilpasset det norske markedet.
         </p>
       </div>
       <div class="features-grid">
         <div class="feature-card feature-card-large">
-          <div class="feature-icon">&#128200;</div>
-          <h3>Compound Interest Visualizer</h3>
-          <p>
-            See exactly how your investments grow over time with interactive charts.
-            Adjust principal, rate, and time to understand your future returns instantly.
-          </p>
-          <div class="feature-tag">Most Popular</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#127919;</div>
-          <h3>Goal Tracker</h3>
-          <p>Set financial goals and watch CompoundIQ map the path to reach them.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#128184;</div>
-          <h3>Multi-Asset Portfolio</h3>
-          <p>Track stocks, bonds, crypto, and savings accounts in one unified dashboard.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#128276;</div>
-          <h3>Smart Alerts</h3>
-          <p>Get notified when milestones are hit or when rebalancing is recommended.</p>
+          <div class="feature-icon">&#128279;</div>
+          <h3 data-i18n="feat-nordnet-title">Nordnet-integrasjon</h3>
+          <p data-i18n="feat-nordnet-desc">Koble til Nordnet og importer porteføljen din automatisk. Se alle aksjer og fond samlet på ett sted.</p>
+          <div class="feature-tag" data-i18n="feat-nordnet-tag">Mest populær</div>
         </div>
         <div class="feature-card">
           <div class="feature-icon">&#128202;</div>
-          <h3>Scenario Modeling</h3>
-          <p>Run "what if" scenarios — extra contributions, different rates, market downturns.</p>
+          <h3 data-i18n="feat-oslobors-title">Oslo Børs &amp; OBX</h3>
+          <p data-i18n="feat-oslobors-desc">Følg Oslo Børs med kursdata og indeksoppdateringer for norske aksjer og fond.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">&#128274;</div>
-          <h3>Bank-Level Security</h3>
-          <p>Your data is encrypted end-to-end. We never sell your information.</p>
+          <div class="feature-icon">&#127981;</div>
+          <h3 data-i18n="feat-ask-title">ASK &amp; BSU-optimering</h3>
+          <p data-i18n="feat-ask-desc">Maksimer skattefordelene dine med vår kalkulator for Aksjesparekonto og BSU.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128240;</div>
+          <h3 data-i18n="feat-news-title">Norsk markedsinnsikt</h3>
+          <p data-i18n="feat-news-desc">Ukentlige sammendrag og trender fra det norske aksjemarkedet og finanspressen.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#128200;</div>
+          <h3 data-i18n="feat-calc-title">Rentesammensetningskalkulator</h3>
+          <p data-i18n="feat-calc-desc">Visualiser veksten i investeringene dine over tid med vår interaktive kalkulator.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">&#127922;</div>
+          <h3 data-i18n="feat-scenario-title">Scenariomodellering</h3>
+          <p data-i18n="feat-scenario-desc">Kjør "hva hvis"-scenarioer — ekstra innskudd, ulike renter, markedsfall.</p>
         </div>
       </div>
     </div>
@@ -141,67 +146,67 @@
   <section class="calculator-section section" id="calculator">
     <div class="container">
       <div class="section-header">
-        <p class="section-tag">Calculator</p>
-        <h2 class="section-title">See your money grow</h2>
-        <p class="section-subtitle">
-          Use our free compound interest calculator to project your investment growth.
+        <p class="section-tag" data-i18n="calc-tag">Kalkulator</p>
+        <h2 class="section-title" data-i18n="calc-title">Se pengene dine vokse</h2>
+        <p class="section-subtitle" data-i18n="calc-subtitle">
+          Bruk vår gratis rentesammensetningskalkulator for å projisere investeringsveksten din.
         </p>
       </div>
       <div class="calculator-card">
         <div class="calc-inputs">
           <div class="input-group">
-            <label for="principal">Initial Investment</label>
+            <label for="principal" data-i18n="calc-principal-label">Startinvestering</label>
             <div class="input-wrapper">
-              <span class="input-prefix">$</span>
-              <input type="number" id="principal" value="10000" min="0" />
+              <input type="number" id="principal" value="100000" min="0" />
+              <span class="input-suffix">kr</span>
             </div>
           </div>
           <div class="input-group">
-            <label for="monthlyContrib">Monthly Contribution</label>
+            <label for="monthlyContrib" data-i18n="calc-monthly-label">Månedlig sparing</label>
             <div class="input-wrapper">
-              <span class="input-prefix">$</span>
-              <input type="number" id="monthlyContrib" value="500" min="0" />
+              <input type="number" id="monthlyContrib" value="3000" min="0" />
+              <span class="input-suffix">kr</span>
             </div>
           </div>
           <div class="input-group">
-            <label for="rate">Annual Interest Rate</label>
+            <label for="rate" data-i18n="calc-rate-label">Årlig rente</label>
             <div class="input-wrapper">
               <input type="number" id="rate" value="8" min="0" max="100" step="0.1" />
               <span class="input-suffix">%</span>
             </div>
           </div>
           <div class="input-group">
-            <label for="years">Time Period</label>
+            <label for="years" data-i18n="calc-years-label">Tidsperiode</label>
             <div class="input-wrapper">
               <input type="number" id="years" value="20" min="1" max="50" />
-              <span class="input-suffix">yrs</span>
+              <span class="input-suffix" data-i18n="years-suffix">år</span>
             </div>
           </div>
           <div class="input-group">
-            <label for="compound">Compounding Frequency</label>
+            <label for="compound" data-i18n="calc-freq-label">Rentefrekvens</label>
             <select id="compound">
-              <option value="12">Monthly</option>
-              <option value="4">Quarterly</option>
-              <option value="2">Semi-Annually</option>
-              <option value="1">Annually</option>
-              <option value="365">Daily</option>
+              <option value="12" data-i18n="freq-monthly">Månedlig</option>
+              <option value="4" data-i18n="freq-quarterly">Kvartalsvis</option>
+              <option value="2" data-i18n="freq-semi">Halvårlig</option>
+              <option value="1" data-i18n="freq-annually">Årlig</option>
+              <option value="365" data-i18n="freq-daily">Daglig</option>
             </select>
           </div>
         </div>
         <div class="calc-results">
           <div class="result-summary">
             <div class="result-item result-item-main">
-              <span class="result-label">Final Balance</span>
-              <span class="result-value" id="finalBalance">$0</span>
+              <span class="result-label" data-i18n="calc-final-label">Sluttsaldo</span>
+              <span class="result-value" id="finalBalance">0 kr</span>
             </div>
             <div class="result-row">
               <div class="result-item">
-                <span class="result-label">Total Contributions</span>
-                <span class="result-value result-value-sm" id="totalContrib">$0</span>
+                <span class="result-label" data-i18n="calc-contrib-label">Totale innskudd</span>
+                <span class="result-value result-value-sm" id="totalContrib">0 kr</span>
               </div>
               <div class="result-item">
-                <span class="result-label">Interest Earned</span>
-                <span class="result-value result-value-sm result-value-green" id="interestEarned">$0</span>
+                <span class="result-label" data-i18n="calc-interest-label">Opptjente renter</span>
+                <span class="result-value result-value-sm result-value-green" id="interestEarned">0 kr</span>
               </div>
             </div>
           </div>
@@ -209,8 +214,8 @@
             <canvas id="growthChart"></canvas>
           </div>
           <div class="chart-legend">
-            <span class="legend-item"><span class="legend-dot legend-dot-blue"></span>Balance</span>
-            <span class="legend-item"><span class="legend-dot legend-dot-green"></span>Contributions</span>
+            <span class="legend-item"><span class="legend-dot legend-dot-blue"></span><span data-i18n="calc-legend-balance">Saldo</span></span>
+            <span class="legend-item"><span class="legend-dot legend-dot-green"></span><span data-i18n="calc-legend-contrib">Innskudd</span></span>
           </div>
         </div>
       </div>
@@ -221,71 +226,26 @@
   <section class="how-it-works section" id="how">
     <div class="container">
       <div class="section-header">
-        <p class="section-tag">How It Works</p>
-        <h2 class="section-title">Start growing in 3 steps</h2>
+        <p class="section-tag" data-i18n="how-tag">Slik fungerer det</p>
+        <h2 class="section-title" data-i18n="how-title">Kom i gang på 3 steg</h2>
       </div>
       <div class="steps">
         <div class="step">
           <div class="step-number">1</div>
-          <h3>Create Your Account</h3>
-          <p>Sign up free in under 60 seconds. No credit card required.</p>
+          <h3 data-i18n="step-1-title">Opprett konto</h3>
+          <p data-i18n="step-1-desc">Registrer deg gratis på under 60 sekunder. Ingen betalingskort nødvendig.</p>
         </div>
         <div class="step-arrow">&#8594;</div>
         <div class="step">
           <div class="step-number">2</div>
-          <h3>Enter Your Investments</h3>
-          <p>Add your current portfolio or start planning from scratch.</p>
+          <h3 data-i18n="step-2-title">Koble til Nordnet</h3>
+          <p data-i18n="step-2-desc">Importer porteføljen din fra Nordnet eller legg inn investeringene manuelt.</p>
         </div>
         <div class="step-arrow">&#8594;</div>
         <div class="step">
           <div class="step-number">3</div>
-          <h3>Watch It Grow</h3>
-          <p>Get personalized projections and insights to maximize your returns.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Testimonials -->
-  <section class="testimonials section" id="testimonials">
-    <div class="container">
-      <div class="section-header">
-        <p class="section-tag">Testimonials</p>
-        <h2 class="section-title">Investors who trust CompoundIQ</h2>
-      </div>
-      <div class="testimonials-grid">
-        <div class="testimonial-card">
-          <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <p>"CompoundIQ completely changed how I think about saving. Seeing the compound growth visualized finally made it click for me."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">SR</div>
-            <div>
-              <strong>Sarah R.</strong>
-              <span>Software Engineer</span>
-            </div>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <p>"I've tried every financial app out there. CompoundIQ is the only one that actually helps me understand my long-term trajectory."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">MK</div>
-            <div>
-              <strong>Marcus K.</strong>
-              <span>Small Business Owner</span>
-            </div>
-          </div>
-        </div>
-        <div class="testimonial-card">
-          <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-          <p>"The scenario modeling feature is incredible. I could test different strategies and see exactly how they play out over 30 years."</p>
-          <div class="testimonial-author">
-            <div class="author-avatar">JL</div>
-            <div>
-              <strong>Jamie L.</strong>
-              <span>Financial Analyst</span>
-            </div>
-          </div>
+          <h3 data-i18n="step-3-title">Følg veksten din</h3>
+          <p data-i18n="step-3-desc">Få personlige prognoser og innsikt tilpasset det norske markedet.</p>
         </div>
       </div>
     </div>
@@ -295,51 +255,67 @@
   <section class="pricing section" id="pricing">
     <div class="container">
       <div class="section-header">
-        <p class="section-tag">Pricing</p>
-        <h2 class="section-title">Simple, transparent pricing</h2>
-        <p class="section-subtitle">Start free. Upgrade when you're ready.</p>
+        <p class="section-tag" data-i18n="pricing-tag">Priser</p>
+        <h2 class="section-title" data-i18n="pricing-title">Enkel, transparent prising</h2>
+        <p class="section-subtitle" data-i18n="pricing-subtitle">Start gratis. Oppgrader når du er klar.</p>
       </div>
       <div class="pricing-grid">
+
+        <!-- Free -->
         <div class="pricing-card">
-          <div class="plan-name">Free</div>
-          <div class="plan-price"><span>$0</span><span class="plan-period">/month</span></div>
-          <p class="plan-desc">Perfect for getting started</p>
+          <div class="plan-name" data-i18n="plan-free-name">Gratis</div>
+          <div class="plan-price">
+            <span data-i18n="plan-free-price">0</span><span class="plan-currency"> kr</span><span class="plan-period" data-i18n="plan-free-period">/mnd</span>
+          </div>
+          <p class="plan-desc" data-i18n="plan-free-desc">Perfekt for å komme i gang</p>
           <ul class="plan-features">
-            <li>&#10003; Compound interest calculator</li>
-            <li>&#10003; 1 portfolio</li>
-            <li>&#10003; Basic goal tracking</li>
-            <li>&#10003; 5-year projections</li>
+            <li>&#10003; <span data-i18n="plan-free-f1">Rentesammensetningskalkulator</span></li>
+            <li>&#10003; <span data-i18n="plan-free-f2">Opptil 3 porteføljer</span></li>
+            <li>&#10003; <span data-i18n="plan-free-f3">Målsporing</span></li>
+            <li>&#10003; <span data-i18n="plan-free-f4">Oslo Børs (15 min. forsinkelse)</span></li>
+            <li>&#10003; <span data-i18n="plan-free-f5">30-års prognoser</span></li>
+            <li>&#10003; <span data-i18n="plan-free-f6">Nordnet CSV-import</span></li>
           </ul>
-          <a href="#" class="btn btn-outline btn-full">Get Started Free</a>
+          <a href="#" class="btn btn-outline btn-full" data-i18n="plan-free-cta">Kom i gang gratis</a>
         </div>
+
+        <!-- Pro -->
         <div class="pricing-card pricing-card-featured">
-          <div class="plan-badge">Most Popular</div>
-          <div class="plan-name">Pro</div>
-          <div class="plan-price"><span>$9</span><span class="plan-period">/month</span></div>
-          <p class="plan-desc">For serious investors</p>
+          <div class="plan-badge" data-i18n="plan-pro-badge">Mest populær</div>
+          <div class="plan-name" data-i18n="plan-pro-name">Pro</div>
+          <div class="plan-price">
+            <span data-i18n="plan-pro-price">99</span><span class="plan-currency"> kr</span><span class="plan-period" data-i18n="plan-pro-period">/mnd</span>
+          </div>
+          <p class="plan-desc" data-i18n="plan-pro-desc">For seriøse investorer</p>
           <ul class="plan-features">
-            <li>&#10003; Everything in Free</li>
-            <li>&#10003; Unlimited portfolios</li>
-            <li>&#10003; Advanced scenario modeling</li>
-            <li>&#10003; 50-year projections</li>
-            <li>&#10003; Smart alerts & insights</li>
-            <li>&#10003; Priority support</li>
+            <li>&#10003; <span data-i18n="plan-pro-f1">Alt i Gratis</span></li>
+            <li>&#10003; <span data-i18n="plan-pro-f2">Ukentlig norsk markedsdigest</span></li>
+            <li>&#10003; <span data-i18n="plan-pro-f3">Sanntidskurser Oslo Børs</span></li>
+            <li>&#10003; <span data-i18n="plan-pro-f4">Full Nordnet-integrasjon (API)</span></li>
+            <li>&#10003; <span data-i18n="plan-pro-f5">ASK &amp; BSU-optimering</span></li>
+            <li>&#10003; <span data-i18n="plan-pro-f6">Ubegrensede porteføljer &amp; 50-årsscenarioer</span></li>
+            <li>&#10003; <span data-i18n="plan-pro-f7">Smarte varsler &amp; prioritert støtte</span></li>
           </ul>
-          <a href="#" class="btn btn-primary btn-full">Start Pro Trial</a>
+          <a href="#" class="btn btn-primary btn-full" data-i18n="plan-pro-cta">Start Pro-prøveperiode</a>
         </div>
+
+        <!-- Teams -->
         <div class="pricing-card">
-          <div class="plan-name">Teams</div>
-          <div class="plan-price"><span>$29</span><span class="plan-period">/month</span></div>
-          <p class="plan-desc">For advisors & families</p>
+          <div class="plan-name" data-i18n="plan-teams-name">Team</div>
+          <div class="plan-price">
+            <span data-i18n="plan-teams-price">299</span><span class="plan-currency"> kr</span><span class="plan-period" data-i18n="plan-teams-period">/mnd</span>
+          </div>
+          <p class="plan-desc" data-i18n="plan-teams-desc">For rådgivere og familier</p>
           <ul class="plan-features">
-            <li>&#10003; Everything in Pro</li>
-            <li>&#10003; Up to 10 users</li>
-            <li>&#10003; Shared dashboards</li>
-            <li>&#10003; Client reporting tools</li>
-            <li>&#10003; API access</li>
+            <li>&#10003; <span data-i18n="plan-teams-f1">Alt i Pro</span></li>
+            <li>&#10003; <span data-i18n="plan-teams-f2">Opptil 5 brukere</span></li>
+            <li>&#10003; <span data-i18n="plan-teams-f3">Delte dashbord</span></li>
+            <li>&#10003; <span data-i18n="plan-teams-f4">Klientrapporteringsverktøy</span></li>
+            <li>&#10003; <span data-i18n="plan-teams-f5">API-tilgang</span></li>
           </ul>
-          <a href="#" class="btn btn-outline btn-full">Contact Sales</a>
+          <a href="#" class="btn btn-outline btn-full" data-i18n="plan-teams-cta">Kontakt salg</a>
         </div>
+
       </div>
     </div>
   </section>
@@ -350,9 +326,9 @@
       <div class="cta-card">
         <div class="hero-orb cta-orb-1"></div>
         <div class="hero-orb cta-orb-2"></div>
-        <h2>Ready to grow smarter?</h2>
-        <p>Join 50,000+ investors who use CompoundIQ to build real wealth.</p>
-        <a href="#" class="btn btn-white btn-lg">Start for Free — No Credit Card</a>
+        <h2 data-i18n="cta-title">Klar til å investere smartere?</h2>
+        <p data-i18n="cta-desc">Investeringsverktøy tilpasset det norske markedet. Ingen kredittkort nødvendig.</p>
+        <a href="#" class="btn btn-white btn-lg" data-i18n="cta-btn">Start gratis — Ingen kredittkort</a>
       </div>
     </div>
   </section>
@@ -365,38 +341,39 @@
           <span class="logo-icon">&#9650;</span>
           CompoundIQ
         </a>
-        <p>Empowering investors to make smarter decisions through the power of compounding.</p>
+        <p data-i18n="footer-desc">Investeringsverktøy bygget for norske investorer, med integrasjoner mot Nordnet og Oslo Børs.</p>
+        <p class="footer-disclaimer" data-i18n="footer-disclaimer">CompoundIQ tilbyr ikke finansiell rådgivning. Alt innhold er kun ment som informasjon.</p>
       </div>
       <div class="footer-links">
         <div class="footer-col">
-          <h4>Product</h4>
+          <h4 data-i18n="footer-product">Produkt</h4>
           <ul>
-            <li><a href="#features">Features</a></li>
-            <li><a href="#calculator">Calculator</a></li>
-            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#features" data-i18n="footer-features-link">Funksjoner</a></li>
+            <li><a href="#calculator" data-i18n="footer-calculator-link">Kalkulator</a></li>
+            <li><a href="#pricing" data-i18n="footer-pricing-link">Priser</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h4>Company</h4>
+          <h4 data-i18n="footer-company">Selskap</h4>
           <ul>
-            <li><a href="#">About</a></li>
-            <li><a href="#">Blog</a></li>
-            <li><a href="#">Careers</a></li>
+            <li><a href="#" data-i18n="footer-about">Om oss</a></li>
+            <li><a href="#" data-i18n="footer-blog">Blogg</a></li>
+            <li><a href="#" data-i18n="footer-careers">Karriere</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h4>Legal</h4>
+          <h4 data-i18n="footer-legal">Juridisk</h4>
           <ul>
-            <li><a href="#">Privacy Policy</a></li>
-            <li><a href="#">Terms of Service</a></li>
-            <li><a href="#">Cookie Policy</a></li>
+            <li><a href="#" data-i18n="footer-privacy">Personvern</a></li>
+            <li><a href="#" data-i18n="footer-terms">Vilkår</a></li>
+            <li><a href="#" data-i18n="footer-cookies">Informasjonskapsler</a></li>
           </ul>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
       <div class="container">
-        <p>&copy; 2026 CompoundIQ. All rights reserved.</p>
+        <p data-i18n="footer-copyright">&copy; 2026 CompoundIQ. Alle rettigheter forbeholdt.</p>
       </div>
     </div>
   </footer>
