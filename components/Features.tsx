@@ -30,17 +30,17 @@ export default function Features() {
 
   const features = [
     {
-      icon: '🔗',
+      icon: '📈',
       titleKey: 'feat-nordnet-title',
       descKey: 'feat-nordnet-desc',
       tagKey: 'feat-nordnet-tag',
       large: true,
     },
-    { icon: '📊', titleKey: 'feat-oslobors-title', descKey: 'feat-oslobors-desc' },
-    { icon: '🏦', titleKey: 'feat-ask-title',     descKey: 'feat-ask-desc' },
-    { icon: '📰', titleKey: 'feat-news-title',    descKey: 'feat-news-desc' },
-    { icon: '📈', titleKey: 'feat-calc-title',    descKey: 'feat-calc-desc' },
-    { icon: '🎲', titleKey: 'feat-scenario-title', descKey: 'feat-scenario-desc' },
+    { icon: '🧾', titleKey: 'feat-oslobors-title', descKey: 'feat-oslobors-desc' },
+    { icon: '🏦', titleKey: 'feat-ask-title',      descKey: 'feat-ask-desc' },
+    { icon: '⚖️', titleKey: 'feat-news-title',     descKey: 'feat-news-desc' },
+    { icon: '🎲', titleKey: 'feat-calc-title',     descKey: 'feat-calc-desc' },
+    { icon: '📥', titleKey: 'feat-scenario-title', descKey: 'feat-scenario-desc' },
   ]
 
   return (

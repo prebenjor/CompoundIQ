@@ -66,28 +66,11 @@ export default function Pricing() {
             </div>
             <p className="plan-desc">{t('plan-pro-desc')}</p>
             <ul className="plan-features">
-              {['f1','f2','f3','f4','f5','f6','f7'].map((f) => (
+              {['f1','f2','f3','f4','f5','f6'].map((f) => (
                 <li key={f}>✓ <span>{t(`plan-pro-${f}`)}</span></li>
               ))}
             </ul>
             <a href="#waitlist" className="btn btn-primary btn-full">{t('plan-pro-cta')}</a>
-          </div>
-
-          {/* Teams */}
-          <div className="pricing-card">
-            <div className="plan-name">{t('plan-teams-name')}</div>
-            <div className="plan-price">
-              <span>{t('plan-teams-price')}</span>
-              <span className="plan-currency"> kr</span>
-              <span className="plan-period">{t('plan-teams-period')}</span>
-            </div>
-            <p className="plan-desc">{t('plan-teams-desc')}</p>
-            <ul className="plan-features">
-              {['f1','f2','f3','f4','f5'].map((f) => (
-                <li key={f}>✓ <span>{t(`plan-teams-${f}`)}</span></li>
-              ))}
-            </ul>
-            <a href="#waitlist" className="btn btn-outline btn-full">{t('plan-teams-cta')}</a>
           </div>
 
         </div>
