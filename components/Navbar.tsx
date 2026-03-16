@@ -35,7 +35,7 @@ export default function Navbar() {
               <span className="lang-sep">|</span>
               <span className={`lang-option${lang === 'en' ? ' active' : ''}`}>EN</span>
             </button>
-            <a href="#" className="btn btn-ghost">{t('nav-login')}</a>
+            <a href="/auth/login" className="btn btn-ghost">{t('nav-login')}</a>
             <a href="#waitlist" className="btn btn-primary">{t('nav-get-started')}</a>
           </div>
           <button
