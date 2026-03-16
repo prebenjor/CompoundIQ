@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   const from = process.env.EMAIL_FROM ?? 'CompoundIQ <onboarding@resend.dev>'
 
-  await Promise.allSettled([
+  const emailResults = await Promise.allSettled([
     resend.emails.send({
       from,
       to: email,
@@ -51,6 +51,14 @@ export async function POST(req: NextRequest) {
       ...notificationEmail(email, language),
     }),
   ])
+
+  emailResults.forEach((result, i) => {
+    if (result.status === 'rejected') {
+      console.error(`Email ${i} failed:`, result.reason)
+    } else if (result.value.error) {
+      console.error(`Email ${i} error:`, result.value.error)
+    }
+  })
 
   return NextResponse.json({ success: true }, { status: 200 })
 }
