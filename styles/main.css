@@ -623,6 +623,161 @@ img {
   color: #fbbf24;
 }
 
+.result-value-sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Account type segmented control */
+.account-selector {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.account-btn {
+  flex: 1;
+  padding: 8px 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+.account-btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.account-btn.active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.account-btn:not(.active):hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+}
+
+/* Tax note below account selector */
+.tax-note {
+  font-size: 0.73rem;
+  color: var(--text-faint);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* SSB KPI button */
+.kpi-btn {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: rgba(99,102,241,0.15);
+  border: 1px solid rgba(99,102,241,0.4);
+  border-radius: 20px;
+  color: var(--primary-light);
+  cursor: pointer;
+  transition: background 0.15s;
+  vertical-align: middle;
+}
+
+.kpi-btn:hover {
+  background: rgba(99,102,241,0.3);
+}
+
+/* Yearly table toggle */
+.calc-table-toggle {
+  width: 100%;
+  padding: 9px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  text-align: center;
+}
+
+.calc-table-toggle:hover {
+  border-color: var(--primary);
+  color: var(--primary-light);
+}
+
+/* Yearly table */
+.calc-table-wrapper {
+  margin-top: 10px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.calc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.calc-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-card);
+  color: var(--text-faint);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 8px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+}
+
+.calc-table th:first-child,
+.calc-table td:first-child {
+  text-align: left;
+}
+
+.calc-table td {
+  padding: 7px 12px;
+  text-align: right;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text-muted);
+}
+
+.calc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.calc-table tr.table-row-milestone td {
+  color: var(--text);
+  font-weight: 600;
+  background: rgba(99,102,241,0.05);
+}
+
+/* Disclaimer below calculator */
+.calc-disclaimer {
+  margin-top: 16px;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  text-align: center;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .chart-container {
   position: relative;
   flex: 1;
