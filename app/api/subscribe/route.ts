@@ -4,7 +4,6 @@ import { createServerClient } from '@/lib/supabase'
 import { confirmationEmail, notificationEmail } from '@/lib/emails'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const NOTIFY_ADDRESS = 'preben.joergensen94@gmail.com'
 
 export async function POST(req: NextRequest) {
   let email: string
@@ -48,7 +47,7 @@ export async function POST(req: NextRequest) {
     }),
     resend.emails.send({
       from,
-      to: NOTIFY_ADDRESS,
+      to: process.env.NOTIFY_ADDRESS ?? '',
       ...notificationEmail(email, language),
     }),
   ])
