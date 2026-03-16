@@ -38,14 +38,16 @@ export async function POST(req: NextRequest) {
 
   const resend = new Resend(process.env.RESEND_API_KEY)
 
+  const from = process.env.EMAIL_FROM ?? 'CompoundIQ <onboarding@resend.dev>'
+
   await Promise.allSettled([
     resend.emails.send({
-      from: 'CompoundIQ <noreply@compoundiq.no>',
+      from,
       to: email,
       ...confirmationEmail(email, language),
     }),
     resend.emails.send({
-      from: 'CompoundIQ <noreply@compoundiq.no>',
+      from,
       to: NOTIFY_ADDRESS,
       ...notificationEmail(email, language),
     }),
