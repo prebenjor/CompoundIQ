@@ -619,6 +619,10 @@ img {
   color: var(--green);
 }
 
+.result-value-amber {
+  color: #fbbf24;
+}
+
 .chart-container {
   position: relative;
   flex: 1;
@@ -646,6 +650,7 @@ img {
 }
 
 .legend-dot-blue { background: var(--primary-light); }
+.legend-dot-amber { background: #fbbf24; }
 .legend-dot-green { background: var(--green); }
 
 /* === How It Works === */

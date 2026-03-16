@@ -9,48 +9,82 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('nb-NO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' kr'
 }
 
-interface CalcResult {
-  finalBalance: number
-  totalContrib: number
-  interestEarned: number
-  balanceData: number[]
-  contribData: number[]
+function formatMultiplier(value: number): string {
+  return value.toLocaleString('nb-NO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '×'
 }
 
+interface CalcResult {
+  finalBalance: number
+  realFinalBalance: number
+  totalContrib: number
+  interestEarned: number
+  multiplier: number
+  balanceData: number[]
+  contribData: number[]
+  realBalanceData: number[]
+}
+
+/**
+ * Simulates month-by-month growth.
+ * - Annual rate is converted to monthly: (1+r)^(1/12) - 1
+ * - Monthly contribution grows by contribGrowth% per year
+ * - Real value deflated by inflation annually
+ */
 function calculate(
   principal: number,
   monthly: number,
   rate: number,
   years: number,
-  compound: number
+  inflation: number,
+  contribGrowth: number
 ): CalcResult {
-  const r = rate / 100
+  const rMonthly = Math.pow(1 + rate / 100, 1 / 12) - 1
+
   const balanceData: number[] = []
   const contribData: number[] = []
+  const realBalanceData: number[] = []
 
-  for (let year = 0; year <= years; year++) {
-    const lumpSum = principal * Math.pow(1 + r / compound, compound * year)
-    const periods = compound * year
-    const rPerPeriod = r / compound
-    const contribFV =
-      monthly > 0 && rPerPeriod > 0
-        ? monthly * ((Math.pow(1 + rPerPeriod, periods) - 1) / rPerPeriod)
-        : monthly * periods
-    balanceData.push(lumpSum + contribFV)
-    contribData.push(principal + monthly * 12 * year)
+  let balance = principal
+  let totalContrib = principal
+
+  balanceData.push(balance)
+  contribData.push(totalContrib)
+  realBalanceData.push(balance)
+
+  for (let year = 1; year <= years; year++) {
+    const monthlyThisYear = monthly * Math.pow(1 + contribGrowth / 100, year - 1)
+    for (let m = 0; m < 12; m++) {
+      balance = balance * (1 + rMonthly) + monthlyThisYear
+      totalContrib += monthlyThisYear
+    }
+    const realBalance = balance / Math.pow(1 + inflation / 100, year)
+    balanceData.push(balance)
+    contribData.push(totalContrib)
+    realBalanceData.push(realBalance)
   }
 
-  const finalBalance = balanceData[balanceData.length - 1]
-  const totalContrib = principal + monthly * 12 * years
+  const finalBalance = balance
+  const realFinalBalance = realBalanceData[realBalanceData.length - 1]
   const interestEarned = Math.max(0, finalBalance - totalContrib)
+  const multiplier = totalContrib > 0 ? finalBalance / totalContrib : 1
 
-  return { finalBalance, totalContrib, interestEarned, balanceData, contribData }
+  return {
+    finalBalance,
+    realFinalBalance,
+    totalContrib,
+    interestEarned,
+    multiplier,
+    balanceData,
+    contribData,
+    realBalanceData,
+  }
 }
 
 function drawChart(
   canvas: HTMLCanvasElement,
   balanceData: number[],
   contribData: number[],
+  realBalanceData: number[],
   years: number,
   yearLabel: string
 ) {
@@ -129,6 +163,19 @@ function drawChart(
   ctx.lineWidth = 2
   ctx.stroke()
 
+  // Real balance line (dashed amber)
+  ctx.beginPath()
+  ctx.setLineDash([5, 4])
+  ctx.moveTo(toX(0), toY(realBalanceData[0]))
+  for (let i = 1; i < points; i++) {
+    const prevX = toX(i - 1), currX = toX(i), cpX = (prevX + currX) / 2
+    ctx.bezierCurveTo(cpX, toY(realBalanceData[i - 1]), cpX, toY(realBalanceData[i]), currX, toY(realBalanceData[i]))
+  }
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)'
+  ctx.lineWidth = 1.5
+  ctx.stroke()
+  ctx.setLineDash([])
+
   // Balance line
   ctx.beginPath()
   ctx.moveTo(toX(0), toY(balanceData[0]))
@@ -158,36 +205,34 @@ export default function Calculator() {
   const { t } = useLang()
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const [principal, setPrincipal]   = useState(100000)
-  const [monthly, setMonthly]       = useState(3000)
-  const [rate, setRate]             = useState(8)
-  const [years, setYears]           = useState(20)
-  const [compound, setCompound]     = useState(12)
-  const [result, setResult]         = useState<CalcResult | null>(null)
+  const [principal, setPrincipal]       = useState(100000)
+  const [monthly, setMonthly]           = useState(3000)
+  const [rate, setRate]                 = useState(8)
+  const [years, setYears]               = useState(20)
+  const [inflation, setInflation]       = useState(2.5)
+  const [contribGrowth, setContribGrowth] = useState(0)
+  const [result, setResult]             = useState<CalcResult | null>(null)
 
   const runCalc = useCallback(() => {
-    const r = calculate(principal, monthly, rate, years, compound)
+    const r = calculate(principal, monthly, rate, years, inflation, contribGrowth)
     setResult(r)
-  }, [principal, monthly, rate, years, compound])
+  }, [principal, monthly, rate, years, inflation, contribGrowth])
 
-  // Recalculate when inputs change
   useEffect(() => {
     const timer = setTimeout(runCalc, 120)
     return () => clearTimeout(timer)
   }, [runCalc])
 
-  // Redraw chart when result or language changes
   useEffect(() => {
     if (!result || !canvasRef.current) return
     const yearLabel = t('chart-year-label')
-    drawChart(canvasRef.current, result.balanceData, result.contribData, years, yearLabel)
+    drawChart(canvasRef.current, result.balanceData, result.contribData, result.realBalanceData, years, yearLabel)
   }, [result, years, t])
 
-  // Resize handler
   useEffect(() => {
     const onResize = () => {
       if (!result || !canvasRef.current) return
-      drawChart(canvasRef.current, result.balanceData, result.contribData, years, t('chart-year-label'))
+      drawChart(canvasRef.current, result.balanceData, result.contribData, result.realBalanceData, years, t('chart-year-label'))
     }
     const timer = { id: undefined as ReturnType<typeof setTimeout> | undefined }
     const debounced = () => { if (timer.id) clearTimeout(timer.id); timer.id = setTimeout(onResize, 200) }
@@ -244,24 +289,32 @@ export default function Calculator() {
                 <input
                   type="number" id="years" min={1} max={50}
                   value={years}
-                  onChange={(e) => setYears(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setYears(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
                 />
                 <span className="input-suffix">{t('years-suffix')}</span>
               </div>
             </div>
             <div className="input-group">
-              <label htmlFor="compound">{t('calc-freq-label')}</label>
-              <select
-                id="compound"
-                value={compound}
-                onChange={(e) => setCompound(parseInt(e.target.value))}
-              >
-                <option value={12}>{t('freq-monthly')}</option>
-                <option value={4}>{t('freq-quarterly')}</option>
-                <option value={2}>{t('freq-semi')}</option>
-                <option value={1}>{t('freq-annually')}</option>
-                <option value={365}>{t('freq-daily')}</option>
-              </select>
+              <label htmlFor="inflation">{t('calc-inflation-label')}</label>
+              <div className="input-wrapper">
+                <input
+                  type="number" id="inflation" min={0} max={20} step={0.1}
+                  value={inflation}
+                  onChange={(e) => setInflation(parseFloat(e.target.value) || 0)}
+                />
+                <span className="input-suffix">%</span>
+              </div>
+            </div>
+            <div className="input-group">
+              <label htmlFor="contribGrowth">{t('calc-contrib-growth-label')}</label>
+              <div className="input-wrapper">
+                <input
+                  type="number" id="contribGrowth" min={0} max={20} step={0.5}
+                  value={contribGrowth}
+                  onChange={(e) => setContribGrowth(parseFloat(e.target.value) || 0)}
+                />
+                <span className="input-suffix">%</span>
+              </div>
             </div>
           </div>
 
@@ -272,6 +325,20 @@ export default function Calculator() {
                 <span className="result-value">
                   {result ? formatCurrency(result.finalBalance) : '0 kr'}
                 </span>
+              </div>
+              <div className="result-row">
+                <div className="result-item">
+                  <span className="result-label">{t('calc-real-label')}</span>
+                  <span className="result-value result-value-sm result-value-amber">
+                    {result ? formatCurrency(result.realFinalBalance) : '0 kr'}
+                  </span>
+                </div>
+                <div className="result-item">
+                  <span className="result-label">{t('calc-multiplier-label')}</span>
+                  <span className="result-value result-value-sm result-value-green">
+                    {result ? formatMultiplier(result.multiplier) : '0×'}
+                  </span>
+                </div>
               </div>
               <div className="result-row">
                 <div className="result-item">
@@ -295,6 +362,10 @@ export default function Calculator() {
               <span className="legend-item">
                 <span className="legend-dot legend-dot-blue" />
                 <span>{t('calc-legend-balance')}</span>
+              </span>
+              <span className="legend-item">
+                <span className="legend-dot legend-dot-amber" />
+                <span>{t('calc-legend-real')}</span>
               </span>
               <span className="legend-item">
                 <span className="legend-dot legend-dot-green" />
