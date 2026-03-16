@@ -65,6 +65,10 @@ export default function WaitlistForm() {
       {status === 'error' && (
         <p className="waitlist-message error">{t('waitlist-error')}</p>
       )}
+      <p
+        className="waitlist-consent"
+        dangerouslySetInnerHTML={{ __html: t('waitlist-consent') }}
+      />
     </form>
   )
 }

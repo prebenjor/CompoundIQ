@@ -36,9 +36,9 @@ export default function Footer() {
           <div className="footer-col">
             <h4>{t('footer-legal')}</h4>
             <ul>
-              <li><a href="#">{t('footer-privacy')}</a></li>
-              <li><a href="#">{t('footer-terms')}</a></li>
-              <li><a href="#">{t('footer-cookies')}</a></li>
+              <li><a href="/personvern">{t('footer-privacy')}</a></li>
+              <li><a href="/vilkar">{t('footer-terms')}</a></li>
+              <li><a href="/informasjonskapsler">{t('footer-cookies')}</a></li>
             </ul>
           </div>
         </div>

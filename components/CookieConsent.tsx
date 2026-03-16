@@ -32,7 +32,7 @@ export default function CookieConsent() {
           <p className="cookie-title">{t('cookie-title')}</p>
           <p>
             {t('cookie-desc')}{' '}
-            <a href="#">{t('cookie-policy-link')}</a>
+            <a href="/informasjonskapsler">{t('cookie-policy-link')}</a>
           </p>
         </div>
         <div className="cookie-actions">
