@@ -5,8 +5,8 @@ import { useLang } from '@/lib/i18n'
 
 type AccountType = 'ask' | 'vanlig' | 'bank'
 
-const TAX_CAPITAL = 0.3784 // 37.84% on gains/dividends (aksjer/fond, 2024)
-const TAX_BANK    = 0.22   // 22% on bank interest
+const TAX_CAPITAL = 0.3784
+const TAX_BANK    = 0.22
 
 function formatCurrency(value: number): string {
   if (value >= 1e9) return (value / 1e9).toFixed(2).replace('.', ',') + ' mrd. kr'
@@ -18,14 +18,13 @@ function formatMultiplier(value: number): string {
   return value.toLocaleString('nb-NO', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '×'
 }
 
-// "2025M12" -> "des. 2025"
 function formatSsbPeriod(code: string): string {
   const mo: Record<string, string> = {
     M01: 'jan', M02: 'feb', M03: 'mar', M04: 'apr', M05: 'mai', M06: 'jun',
     M07: 'jul', M08: 'aug', M09: 'sep', M10: 'okt', M11: 'nov', M12: 'des',
   }
   const year = code.slice(0, 4)
-  const m = code.slice(4)
+  const m    = code.slice(4)
   return `${mo[m] ?? m}. ${year}`
 }
 
@@ -38,32 +37,20 @@ interface YearlyRow {
 }
 
 interface CalcResult {
-  finalBalance: number      // after-tax (ASK: after withdrawal tax; others: after effective rate tax)
-  preTaxBalance: number     // pre-tax (only differs from finalBalance for ASK)
-  realFinalBalance: number  // finalBalance deflated by cumulative inflation
+  finalBalance: number
+  preTaxBalance: number
+  realFinalBalance: number
   totalContrib: number
-  interestEarned: number    // finalBalance - totalContrib
-  multiplier: number        // finalBalance / totalContrib
+  interestEarned: number
+  multiplier: number
   safeWithdrawalAnnual: number
   safeWithdrawalMonthly: number
-  balanceData: number[]     // year-by-year balance (pre-tax growth for ASK)
+  balanceData: number[]
   contribData: number[]
   realBalanceData: number[]
   yearlyRows: YearlyRow[]
 }
 
-/**
- * Simulates month-by-month growth with tax-aware rates.
- *
- * ASK: Compounds at full rate. At withdrawal, 37.84% tax on net gain.
- *      (Skjermingsfradrag not modelled — conservative estimate.)
- *
- * Vanlig konto: Effective rate = rate × (1 − 37.84%).
- *               Models dividend/gains tax drag (simplified annual deduction).
- *
- * Bankkonto: Effective rate = rate × (1 − 22%).
- *            Interest taxed annually.
- */
 function calculate(
   principal: number,
   monthly: number,
@@ -76,7 +63,7 @@ function calculate(
   const effectiveRate =
     accountType === 'bank'   ? rate * (1 - TAX_BANK) :
     accountType === 'vanlig' ? rate * (1 - TAX_CAPITAL) :
-                               rate // ASK: no annual tax
+                               rate
 
   const rMonthly = Math.pow(1 + effectiveRate / 100, 1 / 12) - 1
 
@@ -85,7 +72,7 @@ function calculate(
   const realBalanceData: number[] = []
   const yearlyRows: YearlyRow[]   = []
 
-  let balance    = principal
+  let balance      = principal
   let totalContrib = principal
 
   balanceData.push(balance)
@@ -102,13 +89,7 @@ function calculate(
     balanceData.push(balance)
     contribData.push(totalContrib)
     realBalanceData.push(realBalance)
-    yearlyRows.push({
-      year,
-      balance,
-      contributions: totalContrib,
-      totalReturn: balance - totalContrib,
-      realValue: realBalance,
-    })
+    yearlyRows.push({ year, balance, contributions: totalContrib, totalReturn: balance - totalContrib, realValue: realBalance })
   }
 
   const preTaxBalance = balance
@@ -117,9 +98,9 @@ function calculate(
       ? totalContrib + Math.max(0, preTaxBalance - totalContrib) * (1 - TAX_CAPITAL)
       : balance
 
-  const realFinalBalance     = finalBalance / Math.pow(1 + inflation / 100, years)
-  const interestEarned       = Math.max(0, finalBalance - totalContrib)
-  const multiplier           = totalContrib > 0 ? finalBalance / totalContrib : 1
+  const realFinalBalance      = finalBalance / Math.pow(1 + inflation / 100, years)
+  const interestEarned        = Math.max(0, finalBalance - totalContrib)
+  const multiplier            = totalContrib > 0 ? finalBalance / totalContrib : 1
   const safeWithdrawalAnnual  = finalBalance * 0.04
   const safeWithdrawalMonthly = safeWithdrawalAnnual / 12
 
@@ -166,7 +147,6 @@ function drawChart(
 
   ctx.clearRect(0, 0, width, height)
 
-  // Grid lines
   ctx.strokeStyle = 'rgba(255,255,255,0.05)'
   ctx.lineWidth   = 1
   for (let i = 0; i <= 4; i++) {
@@ -174,7 +154,6 @@ function drawChart(
     ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + chartW, y); ctx.stroke()
   }
 
-  // Contribution fill
   const gradContrib = ctx.createLinearGradient(0, padT, 0, padT + chartH)
   gradContrib.addColorStop(0, 'rgba(16,185,129,0.25)')
   gradContrib.addColorStop(1, 'rgba(16,185,129,0.0)')
@@ -187,7 +166,6 @@ function drawChart(
   ctx.fillStyle = gradContrib
   ctx.fill()
 
-  // Balance fill
   const gradBalance = ctx.createLinearGradient(0, padT, 0, padT + chartH)
   gradBalance.addColorStop(0, 'rgba(99,102,241,0.35)')
   gradBalance.addColorStop(1, 'rgba(99,102,241,0.0)')
@@ -203,7 +181,6 @@ function drawChart(
   ctx.fillStyle = gradBalance
   ctx.fill()
 
-  // Contribution line
   ctx.beginPath()
   ctx.moveTo(toX(0), toY(contribData[0]))
   for (let i = 1; i < points; i++) ctx.lineTo(toX(i), toY(contribData[i]))
@@ -211,7 +188,6 @@ function drawChart(
   ctx.lineWidth   = 2
   ctx.stroke()
 
-  // Real balance line (dashed amber)
   ctx.setLineDash([5, 4])
   ctx.beginPath()
   ctx.moveTo(toX(0), toY(realBalanceData[0]))
@@ -224,7 +200,6 @@ function drawChart(
   ctx.stroke()
   ctx.setLineDash([])
 
-  // Balance line
   ctx.beginPath()
   ctx.moveTo(toX(0), toY(balanceData[0]))
   for (let i = 1; i < points; i++) {
@@ -235,7 +210,6 @@ function drawChart(
   ctx.lineWidth   = 2.5
   ctx.stroke()
 
-  // X-axis labels
   ctx.fillStyle = 'rgba(148,163,184,0.7)'
   ctx.font      = '11px Inter, sans-serif'
   ctx.textAlign = 'center'
@@ -249,46 +223,33 @@ function drawChart(
   ctx.fillText(yearLabel + ' ' + years, toX(points - 1), height - 6)
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function Calculator() {
-  const { t } = useLang()
+  const { t }     = useLang()
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // Inputs
-  const [principal,    setPrincipal]    = useState(100000)
-  const [monthly,      setMonthly]      = useState(3000)
-  const [rate,         setRate]         = useState(8)
-  const [years,        setYears]        = useState(20)
-  const [inflation,    setInflation]    = useState(2.5)
+  const [principal,     setPrincipal]     = useState(100000)
+  const [monthly,       setMonthly]       = useState(3000)
+  const [rate,          setRate]          = useState(8)
+  const [years,         setYears]         = useState(20)
+  const [inflation,     setInflation]     = useState(2.5)
   const [contribGrowth, setContribGrowth] = useState(0)
-  const [accountType,  setAccountType]  = useState<AccountType>('ask')
+  const [accountType,   setAccountType]   = useState<AccountType>('ask')
+  const [result,        setResult]        = useState<CalcResult | null>(null)
+  const [showTable,     setShowTable]     = useState(false)
+  const [norskKpi,      setNorskKpi]      = useState<{ rate: number; period: string } | null>(null)
 
-  // State
-  const [result,    setResult]    = useState<CalcResult | null>(null)
-  const [showTable, setShowTable] = useState(false)
-  const [norskKpi,  setNorskKpi]  = useState<{ rate: number; period: string } | null>(null)
-
-  // Fetch Norwegian CPI from SSB on mount
   useEffect(() => {
     fetch('/api/inflation')
       .then(r => r.json())
-      .then(d => {
-        if (typeof d.rate === 'number') {
-          setNorskKpi({ rate: d.rate, period: d.period ?? '' })
-        }
-      })
-      .catch(() => {}) // silent fail — calculator still works without it
+      .then(d => { if (typeof d.rate === 'number') setNorskKpi({ rate: d.rate, period: d.period ?? '' }) })
+      .catch(() => {})
   }, [])
 
   const runCalc = useCallback(() => {
     setResult(calculate(principal, monthly, rate, years, inflation, contribGrowth, accountType))
   }, [principal, monthly, rate, years, inflation, contribGrowth, accountType])
 
-  useEffect(() => {
-    const timer = setTimeout(runCalc, 120)
-    return () => clearTimeout(timer)
-  }, [runCalc])
+  useEffect(() => { const t = setTimeout(runCalc, 80); return () => clearTimeout(t) }, [runCalc])
 
   useEffect(() => {
     if (!result || !canvasRef.current) return
@@ -306,16 +267,26 @@ export default function Calculator() {
     return () => window.removeEventListener('resize', debounced)
   }, [result, years, t])
 
-  const taxNoteKey =
-    accountType === 'ask'    ? 'calc-tax-note-ask' :
-    accountType === 'vanlig' ? 'calc-tax-note-vanlig' :
-                               'calc-tax-note-bank'
+  const taxNoteKey = accountType === 'ask' ? 'calc-tax-note-ask' : accountType === 'vanlig' ? 'calc-tax-note-vanlig' : 'calc-tax-note-bank'
 
   const ACCOUNT_TYPES: { key: AccountType; labelKey: string }[] = [
     { key: 'ask',    labelKey: 'calc-account-ask' },
     { key: 'vanlig', labelKey: 'calc-account-vanlig' },
     { key: 'bank',   labelKey: 'calc-account-bank' },
   ]
+
+  // Which 4 stats to show below chart depends on account type
+  const stats = result ? [
+    accountType === 'ask'
+      ? { label: t('calc-pretax-label'),   value: formatCurrency(result.preTaxBalance),         color: '' }
+      : { label: t('calc-contrib-label'),  value: formatCurrency(result.totalContrib),           color: '' },
+    accountType === 'ask'
+      ? { label: t('calc-aftertax-label'), value: formatCurrency(result.finalBalance),           color: 'green' }
+      : { label: t('calc-interest-label'), value: formatCurrency(result.interestEarned),         color: 'green' },
+    { label: t('calc-real-label'),         value: formatCurrency(result.realFinalBalance),       color: 'amber' },
+    { label: t('calc-withdrawal-label'),   value: formatCurrency(result.safeWithdrawalAnnual),  color: '',
+      sub: `${formatCurrency(result.safeWithdrawalMonthly)} ${t('calc-per-month')}` },
+  ] : []
 
   return (
     <section className="calculator-section section" id="calculator">
@@ -327,10 +298,12 @@ export default function Calculator() {
         </div>
 
         <div className="calculator-card">
+
           {/* ── Inputs ── */}
           <div className="calc-inputs">
-            {/* Account type selector */}
-            <div className="input-group">
+
+            {/* Account selector — full width */}
+            <div className="input-group input-group-full">
               <label>{t('calc-account-label')}</label>
               <div className="account-selector">
                 {ACCOUNT_TYPES.map(({ key, labelKey }) => (
@@ -346,174 +319,116 @@ export default function Calculator() {
               <p className="tax-note">{t(taxNoteKey)}</p>
             </div>
 
+            {/* Startinvestering */}
             <div className="input-group">
               <label htmlFor="principal">{t('calc-principal-label')}</label>
               <div className="input-wrapper">
-                <input
-                  type="number" id="principal" min={0}
+                <input type="number" id="principal" min={0}
                   value={principal}
-                  onChange={e => setPrincipal(parseFloat(e.target.value) || 0)}
-                />
+                  onChange={e => setPrincipal(parseFloat(e.target.value) || 0)} />
                 <span className="input-suffix">kr</span>
               </div>
             </div>
 
+            {/* Månedlig sparing + slider */}
             <div className="input-group">
-              <label htmlFor="monthlyContrib">{t('calc-monthly-label')}</label>
+              <label htmlFor="monthly">{t('calc-monthly-label')}</label>
               <div className="input-wrapper">
-                <input
-                  type="number" id="monthlyContrib" min={0}
+                <input type="number" id="monthly" min={0}
                   value={monthly}
-                  onChange={e => setMonthly(parseFloat(e.target.value) || 0)}
-                />
+                  onChange={e => setMonthly(parseFloat(e.target.value) || 0)} />
                 <span className="input-suffix">kr</span>
               </div>
+              <input type="range" className="calc-slider" min={0} max={25000} step={500}
+                value={monthly}
+                onChange={e => setMonthly(parseInt(e.target.value))} />
             </div>
 
+            {/* Årsavkastning + slider */}
             <div className="input-group">
               <label htmlFor="rate">{t('calc-rate-label')}</label>
               <div className="input-wrapper">
-                <input
-                  type="number" id="rate" min={0} max={100} step={0.1}
+                <input type="number" id="rate" min={0} max={100} step={0.1}
                   value={rate}
-                  onChange={e => setRate(parseFloat(e.target.value) || 0)}
-                />
+                  onChange={e => setRate(parseFloat(e.target.value) || 0)} />
                 <span className="input-suffix">%</span>
               </div>
+              <input type="range" className="calc-slider" min={0} max={20} step={0.5}
+                value={rate}
+                onChange={e => setRate(parseFloat(e.target.value))} />
             </div>
 
+            {/* Tidshorisont + slider */}
             <div className="input-group">
               <label htmlFor="years">{t('calc-years-label')}</label>
               <div className="input-wrapper">
-                <input
-                  type="number" id="years" min={1} max={50}
+                <input type="number" id="years" min={1} max={50}
                   value={years}
-                  onChange={e => setYears(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
-                />
+                  onChange={e => setYears(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))} />
                 <span className="input-suffix">{t('years-suffix')}</span>
               </div>
+              <input type="range" className="calc-slider" min={1} max={50} step={1}
+                value={years}
+                onChange={e => setYears(parseInt(e.target.value))} />
             </div>
 
+            {/* Inflasjon + SSB button */}
             <div className="input-group">
               <label htmlFor="inflation">
                 {t('calc-inflation-label')}
                 {norskKpi && (
-                  <button
-                    className="kpi-btn"
+                  <button className="kpi-btn"
                     onClick={() => setInflation(norskKpi.rate)}
-                    title={`SSB KPI, ${formatSsbPeriod(norskKpi.period)}`}
-                  >
-                    SSB: {norskKpi.rate.toFixed(1).replace('.', ',')} %
+                    title={`SSB KPI, ${formatSsbPeriod(norskKpi.period)}`}>
+                    SSB {norskKpi.rate.toFixed(1).replace('.', ',')} %
                   </button>
                 )}
               </label>
               <div className="input-wrapper">
-                <input
-                  type="number" id="inflation" min={0} max={20} step={0.1}
+                <input type="number" id="inflation" min={0} max={20} step={0.1}
                   value={inflation}
-                  onChange={e => setInflation(parseFloat(e.target.value) || 0)}
-                />
+                  onChange={e => setInflation(parseFloat(e.target.value) || 0)} />
                 <span className="input-suffix">%</span>
               </div>
             </div>
 
+            {/* Økning i sparing */}
             <div className="input-group">
               <label htmlFor="contribGrowth">{t('calc-contrib-growth-label')}</label>
               <div className="input-wrapper">
-                <input
-                  type="number" id="contribGrowth" min={0} max={20} step={0.5}
+                <input type="number" id="contribGrowth" min={0} max={20} step={0.5}
                   value={contribGrowth}
-                  onChange={e => setContribGrowth(parseFloat(e.target.value) || 0)}
-                />
+                  onChange={e => setContribGrowth(parseFloat(e.target.value) || 0)} />
                 <span className="input-suffix">%</span>
               </div>
             </div>
+
           </div>
 
           {/* ── Results ── */}
           <div className="calc-results">
-            <div className="result-summary">
 
-              {/* Main stat */}
-              <div className="result-item result-item-main">
+            {/* Hero stat */}
+            <div className="result-hero">
+              <div className="result-hero-left">
                 <span className="result-label">
                   {accountType === 'ask' ? t('calc-pretax-label') : t('calc-final-label')}
                 </span>
                 <span className="result-value">
-                  {result ? formatCurrency(accountType === 'ask' ? result.preTaxBalance : result.finalBalance) : '0 kr'}
+                  {result ? formatCurrency(accountType === 'ask' ? result.preTaxBalance : result.finalBalance) : '—'}
                 </span>
-              </div>
-
-              {/* Row 1: after-tax (ASK) or real value + multiplier (others) */}
-              {accountType === 'ask' ? (
-                <div className="result-row">
-                  <div className="result-item">
-                    <span className="result-label">{t('calc-aftertax-label')}</span>
-                    <span className="result-value result-value-sm result-value-green">
-                      {result ? formatCurrency(result.finalBalance) : '0 kr'}
-                    </span>
-                  </div>
-                  <div className="result-item">
-                    <span className="result-label">{t('calc-real-label')}</span>
-                    <span className="result-value result-value-sm result-value-amber">
-                      {result ? formatCurrency(result.realFinalBalance) : '0 kr'}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="result-row">
-                  <div className="result-item">
-                    <span className="result-label">{t('calc-real-label')}</span>
-                    <span className="result-value result-value-sm result-value-amber">
-                      {result ? formatCurrency(result.realFinalBalance) : '0 kr'}
-                    </span>
-                  </div>
-                  <div className="result-item">
-                    <span className="result-label">{t('calc-multiplier-label')}</span>
-                    <span className="result-value result-value-sm result-value-green">
-                      {result ? formatMultiplier(result.multiplier) : '0×'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Row 2: contributions + return */}
-              <div className="result-row">
-                <div className="result-item">
-                  <span className="result-label">{t('calc-contrib-label')}</span>
-                  <span className="result-value result-value-sm">
-                    {result ? formatCurrency(result.totalContrib) : '0 kr'}
+                {accountType === 'ask' && result && (
+                  <span className="result-after-tax">
+                    {t('calc-aftertax-label')}: <strong>{formatCurrency(result.finalBalance)}</strong>
                   </span>
-                </div>
-                <div className="result-item">
-                  <span className="result-label">{t('calc-interest-label')}</span>
-                  <span className="result-value result-value-sm result-value-green">
-                    {result ? formatCurrency(result.interestEarned) : '0 kr'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Row 3: multiplier (ASK only) + safe withdrawal */}
-              <div className="result-row">
-                {accountType === 'ask' && (
-                  <div className="result-item">
-                    <span className="result-label">{t('calc-multiplier-label')}</span>
-                    <span className="result-value result-value-sm result-value-green">
-                      {result ? formatMultiplier(result.multiplier) : '0×'}
-                    </span>
-                  </div>
                 )}
-                <div className="result-item">
-                  <span className="result-label">{t('calc-withdrawal-label')}</span>
-                  <span className="result-value result-value-sm">
-                    {result ? formatCurrency(result.safeWithdrawalAnnual) : '0 kr'}
-                  </span>
-                  <span className="result-value-sub">
-                    {result ? formatCurrency(result.safeWithdrawalMonthly) : '0 kr'} {t('calc-per-month')}
-                  </span>
-                </div>
               </div>
-
+              <div className="result-hero-right">
+                <span className="result-multiplier">
+                  {result ? formatMultiplier(result.multiplier) : '—'}
+                </span>
+                <span className="result-label">{t('calc-multiplier-label')}</span>
+              </div>
             </div>
 
             {/* Chart */}
@@ -535,12 +450,22 @@ export default function Calculator() {
               </span>
             </div>
 
-            {/* Yearly breakdown table */}
+            {/* 4 stat chips */}
+            <div className="calc-stats-row">
+              {stats.map((stat, i) => (
+                <div key={i} className="calc-stat">
+                  <span className="calc-stat-label">{stat.label}</span>
+                  <span className={`calc-stat-value${stat.color ? ` result-value-${stat.color}` : ''}`}>
+                    {stat.value}
+                  </span>
+                  {stat.sub && <span className="calc-stat-sub">{stat.sub}</span>}
+                </div>
+              ))}
+            </div>
+
+            {/* Yearly table */}
             <div>
-              <button
-                className="calc-table-toggle"
-                onClick={() => setShowTable(s => !s)}
-              >
+              <button className="calc-table-toggle" onClick={() => setShowTable(s => !s)}>
                 {showTable ? t('calc-hide-table') : t('calc-show-table')}
               </button>
               {showTable && result && (
@@ -574,12 +499,8 @@ export default function Calculator() {
           </div>
         </div>
 
-        {accountType === 'ask' && (
-          <p className="calc-disclaimer">{t('calc-ask-note')}</p>
-        )}
-        {accountType === 'vanlig' && (
-          <p className="calc-disclaimer">{t('calc-vanlig-note')}</p>
-        )}
+        {accountType === 'ask' && <p className="calc-disclaimer">{t('calc-ask-note')}</p>}
+        {accountType === 'vanlig' && <p className="calc-disclaimer">{t('calc-vanlig-note')}</p>}
 
       </div>
     </section>

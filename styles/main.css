@@ -484,16 +484,22 @@ img {
   border-radius: 20px;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 420px 1fr;
   box-shadow: var(--shadow);
 }
 
 .calc-inputs {
-  padding: 36px;
+  padding: 28px 24px;
   border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 16px;
+  align-content: start;
+}
+
+/* Account selector and full-width items span both columns */
+.input-group-full {
+  grid-column: 1 / -1;
 }
 
 .input-group {
@@ -627,6 +633,126 @@ img {
   font-size: 0.82rem;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+/* ── Range sliders ── */
+.calc-slider {
+  width: 100%;
+  margin-top: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  cursor: pointer;
+  outline: none;
+}
+
+.calc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--bg-card);
+  transition: background 0.15s;
+}
+
+.calc-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid var(--bg-card);
+}
+
+/* ── Hero result ── */
+.result-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+
+.result-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.result-hero-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.result-multiplier {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -1px;
+}
+
+.result-after-tax {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.result-after-tax strong {
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* ── Stat chips row below chart ── */
+.calc-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.calc-stat {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--bg);
+}
+
+.calc-stat:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.calc-stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calc-stat-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: -0.3px;
+}
+
+.calc-stat-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 1px;
 }
 
 /* Account type segmented control */
@@ -1344,8 +1470,22 @@ img {
   }
 
   .calc-inputs {
+    grid-template-columns: 1fr 1fr;
     border-right: none;
     border-bottom: 1px solid var(--border);
+  }
+
+  .calc-stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .calc-stat:nth-child(2) {
+    border-right: none;
+  }
+
+  .calc-stat:nth-child(3),
+  .calc-stat:nth-child(4) {
+    border-top: 1px solid var(--border);
   }
 
   .testimonials-grid,
@@ -1400,6 +1540,20 @@ img {
 
   .footer-links {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .calc-inputs {
+    grid-template-columns: 1fr;
+  }
+
+  .input-group-full {
+    grid-column: 1;
+  }
+
+  .calc-stats-row {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
