@@ -6,6 +6,7 @@ import {
   defaultDashboardSettings,
   formatCurrency,
   formatPercent,
+  loadDashboardSettings,
   loadPortfolioHoldings,
   sampleHoldings,
   savePortfolioHoldings,
@@ -31,11 +32,16 @@ export default function PortfolioManager() {
     loadPortfolioHoldings,
     () => sampleHoldings
   )
+  const settings = useSyncExternalStore(
+    subscribeDashboardStorage,
+    loadDashboardSettings,
+    () => defaultDashboardSettings
+  )
   const [form, setForm] = useState(emptyForm)
 
   const summary = useMemo(
-    () => calculatePortfolioSummary(holdings, defaultDashboardSettings),
-    [holdings]
+    () => calculatePortfolioSummary(holdings, settings),
+    [holdings, settings]
   )
 
   function updateHoldings(next: PortfolioHolding[]) {

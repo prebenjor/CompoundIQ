@@ -55,7 +55,7 @@ export default function DashboardOverview({
               : 'Her er oversikten din akkurat nå.'}
           </p>
         </div>
-        <Link href="/dashboard/portfolio/new" className="btn btn-primary">
+        <Link href="/dashboard/portfolio" className="btn btn-primary">
           + Legg til portefølje
         </Link>
       </div>

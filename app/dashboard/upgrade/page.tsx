@@ -7,7 +7,7 @@ export default function DashboardUpgradePage() {
         <div>
           <h1 className="dash-title">Oppgrader til Pro</h1>
           <p className="dash-subtitle">
-            Denne siden gir oppgraderingslenkene et faktisk mal i stedet for en 404.
+            Denne siden gir oppgraderingslenkene et faktisk mål i stedet for en 404.
           </p>
         </div>
       </div>
@@ -16,7 +16,7 @@ export default function DashboardUpgradePage() {
         <div className="dashboard-panel">
           <h2 className="dash-section-title">Gratis</h2>
           <ul className="dash-checklist">
-            <li>Manuell portfolio</li>
+            <li>Manuell portefølje</li>
             <li>Kalkulator og ASK/BSU-planner</li>
             <li>Lokale innstillinger i nettleseren</li>
           </ul>

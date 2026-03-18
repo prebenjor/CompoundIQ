@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 
 const NAV = [
   { href: '/dashboard', label: 'Oversikt', icon: 'OV' },
-  { href: '/dashboard/portfolio', label: 'Portefolje', icon: 'PF' },
+  { href: '/dashboard/portfolio', label: 'Portefølje', icon: 'PF' },
   { href: '/dashboard/calculator', label: 'Kalkulator', icon: 'KR' },
   { href: '/dashboard/ask-bsu', label: 'ASK og BSU', icon: 'AB' },
   { href: '/dashboard/integrations', label: 'Integrasjoner', icon: 'IN', soon: true },

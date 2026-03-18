@@ -1,5 +1,5 @@
-import PortfolioManager from '@/components/dashboard/PortfolioManager'
+import { redirect } from 'next/navigation'
 
 export default function DashboardNewPortfolioPage() {
-  return <PortfolioManager />
+  redirect('/dashboard/portfolio')
 }

@@ -16,9 +16,7 @@ export default function SettingsPanel() {
     loadDashboardSettings,
     () => defaultDashboardSettings
   )
-  const [draft, setDraft] = useState<DashboardSettings>(
-    defaultDashboardSettings
-  )
+  const [draft, setDraft] = useState<DashboardSettings>(() => loadDashboardSettings())
   const [saved, setSaved] = useState(false)
 
   function updateSetting<K extends keyof DashboardSettings>(
