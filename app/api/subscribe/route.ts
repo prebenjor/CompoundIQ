@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createServerClient } from '@/lib/supabase'
+import { hasServerSupabaseEnv } from '@/lib/env'
 import { confirmationEmail, notificationEmail } from '@/lib/emails'
+import { createServerClient } from '@/lib/supabase'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -21,42 +22,56 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
   }
 
-  const supabase = createServerClient()
+  if (!hasServerSupabaseEnv()) {
+    return NextResponse.json(
+      { error: 'Waitlist storage is not configured yet' },
+      { status: 503 }
+    )
+  }
 
-  const { error } = await supabase
-    .from('waitlist')
-    .insert({ email, language })
+  const supabase = createServerClient()
+  const { error } = await supabase.from('waitlist').insert({ email, language })
 
   if (error) {
     if (error.code === '23505') {
       return NextResponse.json({ duplicate: true }, { status: 200 })
     }
+
     console.error('Supabase error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 
+  if (!process.env.RESEND_API_KEY) {
+    return NextResponse.json({ success: true }, { status: 200 })
+  }
+
   const resend = new Resend(process.env.RESEND_API_KEY)
-
   const from = process.env.EMAIL_FROM ?? 'CompoundIQ <onboarding@resend.dev>'
-
-  const emailResults = await Promise.allSettled([
+  const sends = [
     resend.emails.send({
       from,
       to: email,
       ...confirmationEmail(email, language),
     }),
-    resend.emails.send({
-      from,
-      to: process.env.NOTIFY_ADDRESS ?? '',
-      ...notificationEmail(email, language),
-    }),
-  ])
+  ]
 
-  emailResults.forEach((result, i) => {
+  if (process.env.NOTIFY_ADDRESS) {
+    sends.push(
+      resend.emails.send({
+        from,
+        to: process.env.NOTIFY_ADDRESS,
+        ...notificationEmail(email, language),
+      })
+    )
+  }
+
+  const emailResults = await Promise.allSettled(sends)
+
+  emailResults.forEach((result, index) => {
     if (result.status === 'rejected') {
-      console.error(`Email ${i} failed:`, result.reason)
+      console.error(`Email ${index} failed:`, result.reason)
     } else if (result.value.error) {
-      console.error(`Email ${i} error:`, result.value.error)
+      console.error(`Email ${index} error:`, result.value.error)
     }
   })
 

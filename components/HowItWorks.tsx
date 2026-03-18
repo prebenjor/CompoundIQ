@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import { useLang } from '@/lib/i18n'
 
 export default function HowItWorks() {
@@ -9,7 +9,10 @@ export default function HowItWorks() {
 
   useEffect(() => {
     const steps = sectionRef.current?.querySelectorAll('.step')
-    if (!steps) return
+    if (!steps) {
+      return
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -21,10 +24,12 @@ export default function HowItWorks() {
       },
       { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
     )
+
     steps.forEach((step) => {
       step.classList.add('fade-in')
       observer.observe(step)
     })
+
     return () => observer.disconnect()
   }, [])
 
@@ -42,17 +47,15 @@ export default function HowItWorks() {
           <h2 className="section-title">{t('how-title')}</h2>
         </div>
         <div className="steps">
-          {steps.map((step, i) => (
-            <>
-              <div className="step" key={step.n}>
+          {steps.map((step, index) => (
+            <Fragment key={step.n}>
+              <div className="step">
                 <div className="step-number">{step.n}</div>
                 <h3>{t(step.titleKey)}</h3>
                 <p>{t(step.descKey)}</p>
               </div>
-              {i < steps.length - 1 && (
-                <div className="step-arrow" key={`arrow-${i}`}>→</div>
-              )}
-            </>
+              {index < steps.length - 1 ? <div className="step-arrow">-&gt;</div> : null}
+            </Fragment>
           ))}
         </div>
       </div>

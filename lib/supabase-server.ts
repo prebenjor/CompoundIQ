@@ -1,12 +1,12 @@
 import { createServerClient as createSSRServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+import { getPublicSupabaseEnv } from '@/lib/env'
 
 // Server Component / Route Handler client (reads cookies for session)
 export async function createSupabaseServerClient() {
+  const { supabaseUrl, supabaseAnonKey } = getPublicSupabaseEnv()
   const cookieStore = await cookies()
+
   return createSSRServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {

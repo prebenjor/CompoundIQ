@@ -1,17 +1,28 @@
 import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import DashboardSidebar from '@/components/dashboard/DashboardSidebar'
 import DashboardTopBar from '@/components/dashboard/DashboardTopBar'
+import { hasPublicSupabaseEnv } from '@/lib/env'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export const metadata = {
-  title: 'Dashboard — CompoundIQ',
+  title: 'Dashboard - CompoundIQ',
 }
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const isDemoMode = !hasPublicSupabaseEnv()
+  let user = null
 
-  if (!user) {
+  if (!isDemoMode) {
+    const supabase = await createSupabaseServerClient()
+    const result = await supabase.auth.getUser()
+    user = result.data.user
+  }
+
+  if (!isDemoMode && !user) {
     redirect('/auth/login')
   }
 
@@ -19,10 +30,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="dashboard-root">
       <DashboardSidebar />
       <div className="dashboard-main">
-        <DashboardTopBar user={user} />
-        <main className="dashboard-content">
-          {children}
-        </main>
+        <DashboardTopBar user={user ?? undefined} isDemoMode={isDemoMode} />
+        <main className="dashboard-content">{children}</main>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLang } from '@/lib/i18n'
 
 export default function Navbar() {
@@ -14,7 +14,9 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const closeMenu = () => setMenuOpen(false)
+  function closeMenu() {
+    setMenuOpen(false)
+  }
 
   return (
     <>
@@ -40,22 +42,23 @@ export default function Navbar() {
           </div>
           <button
             className="hamburger"
-            id="hamburger"
             aria-label="Toggle menu"
-            onClick={() => setMenuOpen((o) => !o)}
+            onClick={() => setMenuOpen((open) => !open)}
           >
-            <span /><span /><span />
+            <span />
+            <span />
+            <span />
           </button>
         </div>
       </nav>
 
-      <div className={`mobile-menu${menuOpen ? ' open' : ''}`} id="mobileMenu">
+      <div className={`mobile-menu${menuOpen ? ' open' : ''}`}>
         <ul>
           <li><a href="#features" onClick={closeMenu}>{t('nav-features')}</a></li>
           <li><a href="#calculator" onClick={closeMenu}>{t('nav-calculator')}</a></li>
           <li><a href="#pricing" onClick={closeMenu}>{t('nav-pricing')}</a></li>
           <li>
-            <button className="lang-toggle lang-toggle-mobile" onClick={toggleLang} aria-label="Toggle language">
+            <button className="lang-toggle lang-toggle-mobile" onClick={toggleLang}>
               <span className={`lang-option${lang === 'no' ? ' active' : ''}`}>NO</span>
               <span className="lang-sep">|</span>
               <span className={`lang-option${lang === 'en' ? ' active' : ''}`}>EN</span>

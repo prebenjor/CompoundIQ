@@ -1,20 +1,32 @@
 'use client'
 
+import type { User } from '@supabase/supabase-js'
+import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { hasPublicSupabaseEnv } from '@/lib/env'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
-import type { User } from '@supabase/supabase-js'
 
-export default function DashboardTopBar({ user }: { user: User }) {
+export default function DashboardTopBar({
+  user,
+  isDemoMode,
+}: {
+  user?: User
+  isDemoMode: boolean
+}) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const supabase = createBrowserSupabaseClient()
+  const supabase =
+    !isDemoMode && hasPublicSupabaseEnv() ? createBrowserSupabaseClient() : null
 
-  const initials = (user.email ?? 'U')[0].toUpperCase()
-  const displayEmail = user.email ?? ''
+  const initials = (user?.email ?? 'D')[0].toUpperCase()
+  const displayEmail = user?.email ?? 'demo@compoundiq.local'
 
   async function signOut() {
-    await supabase.auth.signOut()
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
+
     router.push('/')
     router.refresh()
   }
@@ -22,41 +34,59 @@ export default function DashboardTopBar({ user }: { user: User }) {
   return (
     <header className="dash-topbar">
       <div className="dash-topbar-left">
-        {/* Mobile hamburger placeholder — sidebar handles mobile via CSS */}
+        {isDemoMode ? (
+          <span className="dash-demo-copy">Demo mode without Supabase</span>
+        ) : null}
       </div>
 
       <div className="dash-topbar-right">
         <div className="dash-user-menu">
           <button
             className="dash-avatar"
-            onClick={() => setMenuOpen((o) => !o)}
+            onClick={() => setMenuOpen((open) => !open)}
             aria-label="User menu"
           >
             {initials}
           </button>
 
-          {menuOpen && (
+          {menuOpen ? (
             <>
               <div className="dash-user-dropdown">
                 <div className="dash-user-info">
                   <span className="dash-user-email">{displayEmail}</span>
-                  <span className="dash-user-plan">Gratis plan</span>
+                  <span className="dash-user-plan">
+                    {isDemoMode ? 'Local demo' : 'Gratis plan'}
+                  </span>
                 </div>
                 <div className="dash-dropdown-divider" />
-                <a href="/dashboard/settings" className="dash-dropdown-item" onClick={() => setMenuOpen(false)}>
+                <Link
+                  href="/dashboard/settings"
+                  className="dash-dropdown-item"
+                  onClick={() => setMenuOpen(false)}
+                >
                   Innstillinger
-                </a>
-                <a href="/dashboard/upgrade" className="dash-dropdown-item" onClick={() => setMenuOpen(false)}>
-                  Oppgrader til Pro ✦
-                </a>
+                </Link>
+                <Link
+                  href="/dashboard/upgrade"
+                  className="dash-dropdown-item"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Oppgrader til Pro
+                </Link>
                 <div className="dash-dropdown-divider" />
-                <button className="dash-dropdown-item dash-dropdown-signout" onClick={signOut}>
-                  Logg ut
+                <button
+                  className="dash-dropdown-item dash-dropdown-signout"
+                  onClick={signOut}
+                >
+                  {isDemoMode ? 'Til forsiden' : 'Logg ut'}
                 </button>
               </div>
-              <div className="dash-dropdown-backdrop" onClick={() => setMenuOpen(false)} />
+              <div
+                className="dash-dropdown-backdrop"
+                onClick={() => setMenuOpen(false)}
+              />
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

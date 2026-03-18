@@ -2297,3 +2297,372 @@ img {
     flex-wrap: wrap;
   }
 }
+
+/* === Shared Notices === */
+.setup-notice {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-notice-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--primary-light);
+  font-weight: 700;
+}
+
+.setup-notice h2 {
+  font-size: 1.1rem;
+  color: var(--white);
+}
+
+.setup-notice p {
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* === Enhanced Calculator === */
+.account-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.account-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.account-btn.active,
+.account-btn:hover {
+  background: rgba(99,102,241,0.14);
+  border-color: rgba(99,102,241,0.5);
+  color: var(--text);
+}
+
+.tax-note {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.kpi-btn {
+  margin-left: 10px;
+  border: none;
+  background: rgba(16,185,129,0.12);
+  color: var(--green);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.result-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-end;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  flex-wrap: wrap;
+}
+
+.result-hero-left,
+.result-hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-after-tax,
+.calc-stat-sub,
+.calc-disclaimer {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.result-multiplier {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--primary-light);
+}
+
+.calc-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.calc-stat {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.calc-stat-label {
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calc-stat-value {
+  color: var(--white);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.calc-table-toggle {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+.calc-table-wrapper {
+  margin-top: 16px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.calc-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.calc-table th,
+.calc-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.calc-table th {
+  color: var(--text);
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.calc-table td {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.table-row-milestone td {
+  background: rgba(99,102,241,0.06);
+}
+
+/* === Dashboard Extensions === */
+.dash-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-mode-badge {
+  background: rgba(16,185,129,0.12);
+  color: var(--green);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.dash-demo-copy {
+  font-size: 0.82rem;
+  color: var(--text-faint);
+}
+
+.dash-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-stats-three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stat-value-lg {
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.quick-card-icon-text {
+  min-width: 52px;
+  min-height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99,102,241,0.12);
+  color: var(--primary-light);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 16px;
+}
+
+.dashboard-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.dashboard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dashboard-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.dashboard-form input,
+.dashboard-form select {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  font-family: var(--font);
+}
+
+.dashboard-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.panel-copy {
+  color: var(--text-muted);
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+.portfolio-list,
+.insight-list,
+.dash-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.portfolio-list {
+  margin-top: 8px;
+}
+
+.portfolio-item,
+.insight-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.portfolio-item {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.portfolio-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.portfolio-tag {
+  background: rgba(99,102,241,0.14);
+  color: var(--primary-light);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.portfolio-item-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.metric-positive {
+  color: var(--green);
+}
+
+.metric-negative {
+  color: #f87171;
+}
+
+.dash-checklist {
+  padding-left: 18px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .calc-stats-row,
+  .dash-stats-three,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-item {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-form-row,
+  .account-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .result-hero {
+    align-items: flex-start;
+  }
+}

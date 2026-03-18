@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "pages:build": "opennextjs-cloudflare build",
     "pages:preview": "opennextjs-cloudflare preview",
     "pages:deploy": "opennextjs-cloudflare deploy"
@@ -20,11 +20,14 @@
     "resend": "^6.9.3"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@opennextjs/cloudflare": "^1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "esbuild": "^0.27.4",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.1.7",
     "typescript": "^5",
     "wrangler": "^4"
   }

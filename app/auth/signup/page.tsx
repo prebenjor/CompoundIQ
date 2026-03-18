@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
+import { useState } from 'react'
+import SetupNotice from '@/components/SetupNotice'
+import { hasPublicSupabaseEnv } from '@/lib/env'
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
 export default function SignupPage() {
-  const router = useRouter()
+  const authConfigured = hasPublicSupabaseEnv()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -14,24 +15,27 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  const supabase = createBrowserSupabaseClient()
+  async function handleSignup(event: React.FormEvent) {
+    event.preventDefault()
+    if (!authConfigured) {
+      return
+    }
 
-  async function handleSignup(e: React.FormEvent) {
-    e.preventDefault()
     setError(null)
 
     if (password !== confirm) {
       setError('Passordene stemmer ikke overens.')
       return
     }
+
     if (password.length < 8) {
-      setError('Passordet må være minst 8 tegn.')
+      setError('Passordet ma vare minst 8 tegn.')
       return
     }
 
     setLoading(true)
-
-    const { error } = await supabase.auth.signUp({
+    const supabase = createBrowserSupabaseClient()
+    const { error: signupError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -39,13 +43,14 @@ export default function SignupPage() {
       },
     })
 
-    if (error) {
-      setError(getErrorMessage(error.message))
+    if (signupError) {
+      setError(getErrorMessage(signupError.message))
       setLoading(false)
-    } else {
-      setSuccess(true)
-      setLoading(false)
+      return
     }
+
+    setSuccess(true)
+    setLoading(false)
   }
 
   return (
@@ -59,17 +64,28 @@ export default function SignupPage() {
         <h1 className="auth-title">Opprett konto</h1>
         <p className="auth-subtitle">Kom i gang gratis</p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error ? <div className="auth-error">{error}</div> : null}
 
-        {success ? (
+        {!authConfigured ? (
+          <SetupNotice
+            title="Supabase er ikke konfigurert"
+            description="Du kan fortsatt bruke dashboardet i demo mode, men ekte innlogging krever offentlige Supabase-verdier."
+            actionHref="/dashboard"
+            actionLabel="Apne demo-dashboard"
+          />
+        ) : success ? (
           <div className="auth-success">
-            <div className="auth-success-icon">✉</div>
+            <div className="auth-success-icon">Mail</div>
             <h3>Bekreft e-posten din</h3>
             <p>
-              Vi sendte en bekreftelseslenke til <strong>{email}</strong>.
-              Klikk på lenken for å aktivere kontoen din.
+              Vi sendte en bekreftelseslenke til <strong>{email}</strong>. Klikk pa lenken for
+              a aktivere kontoen din.
             </p>
-            <Link href="/auth/login" className="btn btn-primary" style={{ marginTop: '16px', display: 'inline-flex' }}>
+            <Link
+              href="/auth/login"
+              className="btn btn-primary"
+              style={{ marginTop: '16px', display: 'inline-flex' }}
+            >
               Tilbake til innlogging
             </Link>
           </div>
@@ -83,7 +99,7 @@ export default function SignupPage() {
                   type="email"
                   placeholder="deg@eksempel.no"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(event) => setEmail(event.target.value)}
                   required
                   autoComplete="email"
                 />
@@ -95,7 +111,7 @@ export default function SignupPage() {
                   type="password"
                   placeholder="Minst 8 tegn"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
                   autoComplete="new-password"
                 />
@@ -107,25 +123,33 @@ export default function SignupPage() {
                   type="password"
                   placeholder="Gjenta passord"
                   value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
+                  onChange={(event) => setConfirm(event.target.value)}
                   required
                   autoComplete="new-password"
                 />
               </div>
               <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                {loading ? <span className="btn-spinner" /> : 'Opprett konto'}
+                {loading ? 'Oppretter...' : 'Opprett konto'}
               </button>
             </form>
 
             <p className="auth-footer-text">
               Har du allerede konto?{' '}
-              <Link href="/auth/login" className="auth-link">Logg inn</Link>
+              <Link href="/auth/login" className="auth-link">
+                Logg inn
+              </Link>
             </p>
 
             <p className="auth-terms-text">
-              Ved å opprette konto godtar du{' '}
-              <Link href="/vilkar" className="auth-link">vilkårene</Link> og{' '}
-              <Link href="/personvern" className="auth-link">personvernerklæringen</Link>.
+              Ved a opprette konto godtar du{' '}
+              <Link href="/vilkar" className="auth-link">
+                vilkarene
+              </Link>{' '}
+              og{' '}
+              <Link href="/personvern" className="auth-link">
+                personvernerklaringen
+              </Link>
+              .
             </p>
           </>
         )}
@@ -134,9 +158,18 @@ export default function SignupPage() {
   )
 }
 
-function getErrorMessage(msg: string): string {
-  if (msg.includes('already registered')) return 'Denne e-postadressen er allerede registrert.'
-  if (msg.includes('Password should be')) return 'Passordet er for svakt.'
-  if (msg.includes('rate limit')) return 'For mange forsøk. Prøv igjen om litt.'
-  return 'Noe gikk galt. Prøv igjen.'
+function getErrorMessage(message: string) {
+  if (message.includes('already registered')) {
+    return 'Denne e-postadressen er allerede registrert.'
+  }
+
+  if (message.includes('Password should be')) {
+    return 'Passordet er for svakt.'
+  }
+
+  if (message.includes('rate limit')) {
+    return 'For mange forsok. Prov igjen om litt.'
+  }
+
+  return 'Noe gikk galt. Prov igjen.'
 }

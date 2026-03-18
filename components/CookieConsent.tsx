@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLang } from '@/lib/i18n'
 
 const COOKIE_KEY = 'ciq-cookie-consent'
@@ -10,12 +10,15 @@ export default function CookieConsent() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (localStorage.getItem(COOKIE_KEY)) return
+    if (localStorage.getItem(COOKIE_KEY)) {
+      return
+    }
+
     const timer = setTimeout(() => setVisible(true), 800)
     return () => clearTimeout(timer)
   }, [])
 
-  const accept = (value: 'all' | 'necessary') => {
+  function accept(value: 'all' | 'necessary') {
     localStorage.setItem(COOKIE_KEY, value)
     setVisible(false)
   }

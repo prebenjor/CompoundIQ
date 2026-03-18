@@ -32,17 +32,17 @@ export default function Hero() {
         </div>
         <div className="hero-highlights">
           <div className="highlight-item">
-            <span className="highlight-icon">🏦</span>
+            <span className="highlight-icon">ASK</span>
             <span>{t('highlight-1')}</span>
           </div>
           <div className="highlight-divider" />
           <div className="highlight-item">
-            <span className="highlight-icon">🧾</span>
+            <span className="highlight-icon">Tax</span>
             <span>{t('highlight-2')}</span>
           </div>
           <div className="highlight-divider" />
           <div className="highlight-item">
-            <span className="highlight-icon">🎲</span>
+            <span className="highlight-icon">Plan</span>
             <span>{t('highlight-3')}</span>
           </div>
         </div>

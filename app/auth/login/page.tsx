@@ -1,61 +1,81 @@
 'use client'
 
-import { useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import Link from 'next/link'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import SetupNotice from '@/components/SetupNotice'
+import { hasPublicSupabaseEnv } from '@/lib/env'
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/dashboard'
   const errorParam = searchParams.get('error')
+  const authConfigured = hasPublicSupabaseEnv()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(errorParam ? 'Autentisering mislyktes. Prøv igjen.' : null)
+  const [error, setError] = useState<string | null>(
+    getErrorMessage(errorParam)
+  )
   const [success, setSuccess] = useState(false)
 
-  const supabase = createBrowserSupabaseClient()
+  async function handleLogin(event: React.FormEvent) {
+    event.preventDefault()
+    if (!authConfigured) {
+      return
+    }
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const supabase = createBrowserSupabaseClient()
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
 
-    if (error) {
-      setError(getErrorMessage(error.message))
+    if (loginError) {
+      setError(getSupabaseErrorMessage(loginError.message))
       setLoading(false)
-    } else {
-      router.push(next)
-      router.refresh()
+      return
     }
+
+    router.push(next)
+    router.refresh()
   }
 
-  async function handleMagicLink(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleMagicLink(event: React.FormEvent) {
+    event.preventDefault()
+    if (!authConfigured) {
+      return
+    }
+
     if (!email) {
       setError('Skriv inn e-postadressen din.')
       return
     }
+
     setLoading(true)
     setError(null)
-
-    const { error } = await supabase.auth.signInWithOtp({
+    const supabase = createBrowserSupabaseClient()
+    const { error: magicError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
     })
 
-    if (error) {
-      setError(getErrorMessage(error.message))
+    if (magicError) {
+      setError(getSupabaseErrorMessage(magicError.message))
       setLoading(false)
-    } else {
-      setSuccess(true)
-      setLoading(false)
+      return
     }
+
+    setSuccess(true)
+    setLoading(false)
   }
 
   return (
@@ -69,13 +89,23 @@ function LoginForm() {
         <h1 className="auth-title">Logg inn</h1>
         <p className="auth-subtitle">Velkommen tilbake</p>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error ? <div className="auth-error">{error}</div> : null}
 
-        {success ? (
+        {!authConfigured ? (
+          <SetupNotice
+            title="Supabase er ikke konfigurert"
+            description="Auth er satt opp, men prosjektet mangler de offentlige Supabase-verdiene. Dashboardet fungerer fortsatt i demo mode."
+            actionHref="/dashboard"
+            actionLabel="Apne demo-dashboard"
+          />
+        ) : success ? (
           <div className="auth-success">
-            <div className="auth-success-icon">✉</div>
+            <div className="auth-success-icon">Mail</div>
             <h3>Sjekk e-posten din</h3>
-            <p>Vi sendte en innloggingslenke til <strong>{email}</strong>. Klikk på lenken for å logge inn.</p>
+            <p>
+              Vi sendte en innloggingslenke til <strong>{email}</strong>. Klikk pa lenken for
+              a logge inn.
+            </p>
           </div>
         ) : (
           <>
@@ -87,7 +117,7 @@ function LoginForm() {
                   type="email"
                   placeholder="deg@eksempel.no"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(event) => setEmail(event.target.value)}
                   required
                   autoComplete="email"
                 />
@@ -95,20 +125,22 @@ function LoginForm() {
               <div className="form-group">
                 <label htmlFor="password">
                   Passord
-                  <Link href="/auth/forgot-password" className="form-link">Glemt passord?</Link>
+                  <Link href="/auth/forgot-password" className="form-link">
+                    Glemt passord?
+                  </Link>
                 </label>
                 <input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Minst 8 tegn"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
                   autoComplete="current-password"
                 />
               </div>
               <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                {loading ? <span className="btn-spinner" /> : 'Logg inn'}
+                {loading ? 'Logger inn...' : 'Logg inn'}
               </button>
             </form>
 
@@ -121,12 +153,14 @@ function LoginForm() {
               className="btn btn-ghost btn-full"
               disabled={loading}
             >
-              Send innloggingslenke på e-post
+              Send innloggingslenke pa e-post
             </button>
 
             <p className="auth-footer-text">
               Har du ikke konto?{' '}
-              <Link href="/auth/signup" className="auth-link">Opprett konto</Link>
+              <Link href="/auth/signup" className="auth-link">
+                Opprett konto
+              </Link>
             </p>
           </>
         )}
@@ -143,9 +177,34 @@ export default function LoginPage() {
   )
 }
 
-function getErrorMessage(msg: string): string {
-  if (msg.includes('Invalid login credentials')) return 'Feil e-post eller passord.'
-  if (msg.includes('Email not confirmed')) return 'Bekreft e-posten din først.'
-  if (msg.includes('rate limit')) return 'For mange forsøk. Prøv igjen om litt.'
-  return 'Noe gikk galt. Prøv igjen.'
+function getErrorMessage(errorParam: string | null) {
+  if (!errorParam) {
+    return null
+  }
+
+  if (errorParam === 'missing_config') {
+    return 'Supabase mangler miljoverdier. Bruk demo-dashboardet eller legg inn konfigurasjon.'
+  }
+
+  if (errorParam === 'auth_callback_failed') {
+    return 'Autentisering mislyktes. Prov igjen.'
+  }
+
+  return null
+}
+
+function getSupabaseErrorMessage(message: string) {
+  if (message.includes('Invalid login credentials')) {
+    return 'Feil e-post eller passord.'
+  }
+
+  if (message.includes('Email not confirmed')) {
+    return 'Bekreft e-posten din forst.'
+  }
+
+  if (message.includes('rate limit')) {
+    return 'For mange forsok. Prov igjen om litt.'
+  }
+
+  return 'Noe gikk galt. Prov igjen.'
 }
