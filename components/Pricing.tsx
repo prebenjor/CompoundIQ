@@ -6,6 +6,8 @@ import { useLang } from '@/lib/i18n'
 export default function Pricing() {
   const { t } = useLang()
   const sectionRef = useRef<HTMLElement>(null)
+  const freeFeatures = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8']
+  const proFeatures = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8']
 
   useEffect(() => {
     const cards = sectionRef.current?.querySelectorAll('.pricing-card')
@@ -51,7 +53,7 @@ export default function Pricing() {
             </div>
             <p className="plan-desc">{t('plan-free-desc')}</p>
             <ul className="plan-features">
-              {['f1', 'f2', 'f3', 'f4', 'f5', 'f6'].map((feature) => (
+              {freeFeatures.map((feature) => (
                 <li key={feature}>OK <span>{t(`plan-free-${feature}`)}</span></li>
               ))}
             </ul>
@@ -68,7 +70,7 @@ export default function Pricing() {
             </div>
             <p className="plan-desc">{t('plan-pro-desc')}</p>
             <ul className="plan-features">
-              {['f1', 'f2', 'f3', 'f4', 'f5', 'f6'].map((feature) => (
+              {proFeatures.map((feature) => (
                 <li key={feature}>OK <span>{t(`plan-pro-${feature}`)}</span></li>
               ))}
             </ul>

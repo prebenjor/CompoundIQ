@@ -7,7 +7,7 @@ export default function DashboardUpgradePage() {
         <div>
           <h1 className="dash-title">Oppgrader til Pro</h1>
           <p className="dash-subtitle">
-            Denne siden gir oppgraderingslenkene et faktisk mål i stedet for en 404.
+            Gratisplanen skal være nyttig alene. Pro skal være billigere og tydelig mer verdifull.
           </p>
         </div>
       </div>
@@ -16,17 +16,19 @@ export default function DashboardUpgradePage() {
         <div className="dashboard-panel">
           <h2 className="dash-section-title">Gratis</h2>
           <ul className="dash-checklist">
-            <li>Manuell portefølje</li>
-            <li>Kalkulator og ASK/BSU-planner</li>
-            <li>Lokale innstillinger i nettleseren</li>
+            <li>Manuell portefølje og kalkulator for ASK, fond/aksjer og bank</li>
+            <li>ASK/BSU-planner, realverdi, uttak og scenario-sammenligning</li>
+            <li>Import og eksport av JSON, CSV og regnearkvennlig CSV</li>
+            <li>Lokal lagring av flere scenarioer og standardinnstillinger</li>
           </ul>
         </div>
         <div className="dashboard-panel">
-          <h2 className="dash-section-title">Pro roadmap</h2>
+          <h2 className="dash-section-title">Pro til 29 kr/mnd</h2>
           <ul className="dash-checklist">
-            <li>Synkronisering mellom enheter</li>
-            <li>Eksport til PDF og CSV</li>
-            <li>Integrasjoner mot meglere og markedsdata</li>
+            <li>Synkronisering mellom enheter og ubegrensede porteføljer</li>
+            <li>Broker-import, automatisk oppdatering og delbare lenker</li>
+            <li>Eksport til PDF, CSV og JSON med rapportmaler</li>
+            <li>Målsporing, varsler, innsikter og husstandsdeling</li>
           </ul>
           <Link href="/dashboard/integrations" className="btn btn-primary">
             Se hva som kommer
