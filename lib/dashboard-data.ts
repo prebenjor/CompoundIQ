@@ -65,6 +65,11 @@ export const sampleHoldings: PortfolioHolding[] = [
   },
 ]
 
+let cachedPortfolioRaw: string | null | undefined
+let cachedPortfolioSnapshot: PortfolioHolding[] = sampleHoldings
+let cachedSettingsRaw: string | null | undefined
+let cachedSettingsSnapshot: DashboardSettings = defaultDashboardSettings
+
 function parseJson<T>(value: string | null, fallback: T): T {
   if (!value) {
     return fallback
@@ -94,12 +99,17 @@ export function loadPortfolioHoldings() {
     return sampleHoldings
   }
 
-  const parsed = parseJson<PortfolioHolding[]>(
-    window.localStorage.getItem(PORTFOLIO_STORAGE_KEY),
-    sampleHoldings
-  )
+  const raw = window.localStorage.getItem(PORTFOLIO_STORAGE_KEY)
 
-  return parsed.filter((holding) => Boolean(holding.id && holding.name))
+  if (raw === cachedPortfolioRaw) {
+    return cachedPortfolioSnapshot
+  }
+
+  const parsed = parseJson<PortfolioHolding[]>(raw, sampleHoldings)
+  cachedPortfolioRaw = raw
+  cachedPortfolioSnapshot = parsed.filter((holding) => Boolean(holding.id && holding.name))
+
+  return cachedPortfolioSnapshot
 }
 
 export function savePortfolioHoldings(holdings: PortfolioHolding[]) {
@@ -107,7 +117,10 @@ export function savePortfolioHoldings(holdings: PortfolioHolding[]) {
     return
   }
 
-  window.localStorage.setItem(PORTFOLIO_STORAGE_KEY, JSON.stringify(holdings))
+  const serialized = JSON.stringify(holdings)
+  window.localStorage.setItem(PORTFOLIO_STORAGE_KEY, serialized)
+  cachedPortfolioRaw = serialized
+  cachedPortfolioSnapshot = holdings
   emitStorageChange()
 }
 
@@ -116,13 +129,19 @@ export function loadDashboardSettings() {
     return defaultDashboardSettings
   }
 
-  return {
-    ...defaultDashboardSettings,
-    ...parseJson<Partial<DashboardSettings>>(
-      window.localStorage.getItem(SETTINGS_STORAGE_KEY),
-      defaultDashboardSettings
-    ),
+  const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+
+  if (raw === cachedSettingsRaw) {
+    return cachedSettingsSnapshot
   }
+
+  cachedSettingsRaw = raw
+  cachedSettingsSnapshot = {
+    ...defaultDashboardSettings,
+    ...parseJson<Partial<DashboardSettings>>(raw, defaultDashboardSettings),
+  }
+
+  return cachedSettingsSnapshot
 }
 
 export function saveDashboardSettings(settings: DashboardSettings) {
@@ -130,7 +149,10 @@ export function saveDashboardSettings(settings: DashboardSettings) {
     return
   }
 
-  window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+  const serialized = JSON.stringify(settings)
+  window.localStorage.setItem(SETTINGS_STORAGE_KEY, serialized)
+  cachedSettingsRaw = serialized
+  cachedSettingsSnapshot = settings
   emitStorageChange()
 }
 
