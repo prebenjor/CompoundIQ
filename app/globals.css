@@ -2610,10 +2610,20 @@ img {
 
 .portfolio-item,
 .insight-card {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 16px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.insight-card strong {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .portfolio-item {
@@ -2735,14 +2745,21 @@ img {
 }
 
 .mfa-qr {
-  width: 176px;
-  max-width: 100%;
-  height: auto;
-  display: block;
-  margin: 12px 0 16px;
-  padding: 12px;
-  background: #fff;
-  border-radius: 16px;
+    width: 176px;
+    max-width: 100%;
+    min-height: 176px;
+    display: block;
+    margin: 12px 0 16px;
+    padding: 12px;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.mfa-qr svg {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 @media (max-width: 900px) {

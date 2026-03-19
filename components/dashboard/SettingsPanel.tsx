@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import {
   defaultDashboardSettings,
@@ -25,6 +24,7 @@ interface PendingTotpEnrollment {
   factorId: string
   qrCode: string
   secret: string
+  uri: string
 }
 
 const preferenceFields: Array<{
@@ -35,27 +35,27 @@ const preferenceFields: Array<{
   {
     key: 'weeklyDigest',
     label: 'Ukentlig sammendrag',
-    description: 'Fa varsler om portefoljeutvikling og en kort oppsummering av uken.',
+    description: 'F\u00e5 varsler om portef\u00f8ljeutvikling og en kort oppsummering av uken.',
   },
   {
     key: 'taxReminders',
-    label: 'Skattepaminnelser',
-    description: 'Hold oversikt over frister som pavirker ASK, aksjer og rapportering.',
+    label: 'Skattep\u00e5minnelser',
+    description: 'Hold oversikt over frister som p\u00e5virker ASK, aksjer og rapportering.',
   },
   {
     key: 'productUpdates',
     label: 'Produktnyheter',
-    description: 'Fa beskjed nar nye integrasjoner, eksporttyper og analysefunksjoner lanseres.',
+    description: 'F\u00e5 beskjed n\u00e5r nye integrasjoner, eksporttyper og analysefunksjoner lanseres.',
   },
   {
     key: 'securityAlerts',
     label: 'Sikkerhetsvarsler',
-    description: 'Fa e-post ved passordendringer, nye innlogginger og MFA-endringer.',
+    description: 'F\u00e5 e-post ved passordendringer, nye innlogginger og MFA-endringer.',
   },
   {
     key: 'compactNumbers',
     label: 'Kompakte tall',
-    description: 'Vis store belop i kortere format i dashboardet nar denne visningen er i bruk.',
+    description: 'Vis store bel\u00f8p i kortere format i dashboardet n\u00e5r denne visningen er i bruk.',
   },
 ]
 
@@ -241,6 +241,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
       return
     }
 
+    const previous = preferences
     const next = { ...preferences, [key]: !preferences[key] }
     setPreferences(next)
     setPreferencesSaving(true)
@@ -254,7 +255,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
       setPreferences(bundle.preferences)
       setPreferencesMessage('Preferansene ble oppdatert.')
     } catch (error) {
-      setPreferences(preferences)
+      setPreferences(previous)
       const message =
         error instanceof Error ? getDataErrorMessage(error.message) : getDataErrorMessage()
       setDataError(message)
@@ -280,7 +281,9 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
     if (error) {
       setSecurityError(getAuthErrorMessage(error.message))
     } else {
-      setSecurityMessage('Vi sendte en passordlenke til e-postadressen pa kontoen.')
+      setSecurityMessage(
+        'Vi sendte en lenke for tilbakestilling av passord til e-postadressen på kontoen.'
+      )
     }
 
     setSendingReset(false)
@@ -297,7 +300,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
     if (error) {
       setSecurityError(getAuthErrorMessage(error.message))
     } else {
-      setSecurityMessage('Andre aktive okter ble logget ut.')
+      setSecurityMessage('Andre aktive økter ble logget ut.')
     }
 
     setSigningOutOthers(false)
@@ -336,9 +339,20 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
       factorId: data.id,
       qrCode: data.totp.qr_code,
       secret: data.totp.secret,
+      uri: data.totp.uri,
     })
     setMfaMessage('Skann QR-koden og bekreft med den 6-sifrede koden fra appen din.')
     setMfaActionLoading(false)
+  }
+
+  async function copyMfaValue(value: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(value)
+      setMfaMessage(successMessage)
+      setMfaError(null)
+    } catch {
+      setMfaError('Kunne ikke kopiere automatisk. Kopier verdien manuelt.')
+    }
   }
 
   async function verifyTotpEnrollment(event: React.FormEvent<HTMLFormElement>) {
@@ -375,7 +389,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
 
     setPendingTotp(null)
     setTotpCode('')
-    setMfaMessage('TOTP er aktivert. Fremtidige innlogginger kan kreve ekstra kode.')
+    setMfaMessage('Tofaktorautentisering er aktivert. Fremtidige innlogginger kan kreve ekstra kode.')
     await refreshMfaState()
     setMfaActionLoading(false)
   }
@@ -396,7 +410,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
 
     setPendingTotp(null)
     setTotpCode('')
-    setMfaMessage('TOTP ble deaktivert for kontoen.')
+    setMfaMessage('Tofaktorautentisering ble deaktivert for kontoen.')
     await refreshMfaState()
     setMfaActionLoading(false)
   }
@@ -422,7 +436,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
           ) : (
             <form className="dashboard-form" onSubmit={handleSave}>
               <label>
-                Manedlig sparing
+                {'Månedlig sparing'}
                 <input
                   type="number"
                   value={draft.monthlyContribution}
@@ -433,7 +447,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
               </label>
               <div className="dashboard-form-row">
                 <label>
-                  Forventet arlig avkastning
+                  {'Forventet årlig avkastning'}
                   <input
                     type="number"
                     step="0.1"
@@ -456,11 +470,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
                 </label>
               </div>
               <div className="dash-actions">
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={settingsSaving}
-                >
+                <button type="submit" className="btn btn-primary" disabled={settingsSaving}>
                   {settingsSaving ? 'Lagrer...' : 'Lagre innstillinger'}
                 </button>
                 <button
@@ -481,7 +491,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
           <h2 className="dash-section-title">Aktive standarder</h2>
           <div className="insight-list">
             <div className="insight-card">
-              <span className="stat-label">Manedlig sparing</span>
+              <span className="stat-label">{'Månedlig sparing'}</span>
               <strong>{formatCurrency(activeSettings.monthlyContribution)}</strong>
             </div>
             <div className="insight-card">
@@ -494,7 +504,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
             </div>
           </div>
           <p className="panel-copy">
-            Disse standardverdiene brukes i kalkulatorer og portefoljevisninger for kontoen din.
+            Disse standardverdiene brukes i kalkulatorer og porteføljevisninger for kontoen din.
           </p>
         </div>
       </div>
@@ -547,12 +557,12 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
               <strong>{userEmail ?? 'Ukjent bruker'}</strong>
             </div>
             <div className="insight-card">
-              <span className="stat-label">Autentiseringsniva</span>
+              <span className="stat-label">{'Autentiseringsnivå'}</span>
               <strong>{formatAalLabel(aalLevel, nextAalLevel)}</strong>
             </div>
           </div>
           <p className="panel-copy">
-            Bruk sikkerhetsdelen under for passordreset, MFA og handtering av aktive okter.
+            {'Bruk sikkerhetsdelen under for tilbakestilling av passord, MFA og håndtering av aktive økter.'}
           </p>
         </div>
       </div>
@@ -565,9 +575,9 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
           <div className="settings-action-list">
             <div className="settings-action-card">
               <div>
-                <strong className="settings-toggle-title">Passordreset</strong>
+                <strong className="settings-toggle-title">Tilbakestilling av passord</strong>
                 <p className="panel-copy">
-                  Send en sikker lenke til e-posten pa kontoen for a sette nytt passord.
+                  {'Send en sikker lenke til e-posten på kontoen for å sette nytt passord.'}
                 </p>
               </div>
               <button
@@ -582,9 +592,9 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
 
             <div className="settings-action-card">
               <div>
-                <strong className="settings-toggle-title">Andre aktive okter</strong>
+                <strong className="settings-toggle-title">{'Andre aktive økter'}</strong>
                 <p className="panel-copy">
-                  Logg ut andre nettlesere og enheter dersom du vil rydde opp i aktive okter.
+                  {'Logg ut andre nettlesere og enheter dersom du vil rydde opp i aktive økter.'}
                 </p>
               </div>
               <button
@@ -611,7 +621,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
                 {verifiedTotpFactor
                   ? `Aktiv (${verifiedTotpFactor.friendly_name ?? 'TOTP'})`
                   : hasPendingTotp || pendingTotp
-                    ? 'Venter pa bekreftelse'
+                    ? 'Venter på bekreftelse'
                     : 'Ikke aktiv'}
               </strong>
             </div>
@@ -626,18 +636,45 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
               <p className="panel-copy">
                 Skann QR-koden i Google Authenticator, 1Password eller tilsvarende app.
               </p>
-              <Image
+              <div
                 className="mfa-qr"
-                src={`data:image/svg+xml;utf-8,${encodeURIComponent(pendingTotp.qrCode)}`}
-                alt="QR-kode for TOTP-oppsett"
-                width={176}
-                height={176}
-                unoptimized
+                role="img"
+                aria-label="QR-kode for TOTP-oppsett"
+                dangerouslySetInnerHTML={{ __html: normalizeTotpQrSvg(pendingTotp.qrCode) }}
               />
+              <div className="dash-actions">
+                <a href={pendingTotp.uri} className="btn btn-outline">
+                  {'Åpne i autentiseringsapp'}
+                </a>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() =>
+                    void copyMfaValue(
+                      pendingTotp.uri,
+                      'Oppsettslenken ble kopiert. Lim den inn i autentiseringsappen hvis QR-koden ikke vises.'
+                    )
+                  }
+                >
+                  Kopier oppsettslenke
+                </button>
+              </div>
               <label className="dashboard-form">
                 <span className="settings-inline-label">Manuell hemmelighet</span>
                 <input value={pendingTotp.secret} readOnly />
               </label>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() =>
+                  void copyMfaValue(
+                    pendingTotp.secret,
+                    'Den manuelle hemmeligheten ble kopiert.'
+                  )
+                }
+              >
+                Kopier hemmelighet
+              </button>
               <form className="dashboard-form" onSubmit={verifyTotpEnrollment}>
                 <label>
                   Bekreft kode
@@ -679,7 +716,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
               <div>
                 <strong className="settings-toggle-title">Aktiv TOTP</strong>
                 <p className="panel-copy">
-                  Du ma normalt vare pa hoyere sikkerhetsniva for a deaktivere en verifisert faktor.
+                  {'Du må normalt bekrefte identiteten din på nytt for å deaktivere en verifisert faktor.'}
                 </p>
               </div>
               <button
@@ -696,7 +733,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
               <div>
                 <strong className="settings-toggle-title">Aktiver TOTP</strong>
                 <p className="panel-copy">
-                  Legg til en autentiseringsapp for a beskytte kontoen med ekstra kode ved innlogging.
+                  {'Legg til en autentiseringsapp for å beskytte kontoen med ekstra kode ved innlogging.'}
                 </p>
               </div>
               <button
@@ -721,30 +758,30 @@ function formatAalLabel(currentLevel: string | null, nextLevel: string | null) {
   }
 
   if (currentLevel === 'aal2') {
-    return 'AAL2 (passord + MFA)'
+    return 'Høyt sikkerhetsnivå (passord og tofaktor)'
   }
 
   if (nextLevel === 'aal2') {
-    return 'AAL1 na, AAL2 tilgjengelig etter MFA'
+    return 'Standard sikkerhetsnivå. Du kan aktivere tofaktor under.'
   }
 
-  return 'AAL1 (passord eller magisk lenke)'
+  return 'Standard sikkerhetsnivå'
 }
 
 function getAuthErrorMessage(message?: string) {
   if (!message) {
-    return 'Noe gikk galt. Prov igjen.'
+    return 'Noe gikk galt. Prøv igjen.'
   }
 
   if (message.includes('rate limit')) {
-    return 'For mange forsok. Prov igjen om litt.'
+    return 'For mange forsøk. Prøv igjen om litt.'
   }
 
   if (message.includes('session')) {
-    return 'Okten din er ikke gyldig lenger. Logg inn pa nytt og prov igjen.'
+    return 'Økten din er ikke gyldig lenger. Logg inn på nytt og prøv igjen.'
   }
 
-  return 'Noe gikk galt. Prov igjen.'
+  return 'Noe gikk galt. Prøv igjen.'
 }
 
 function getMfaErrorMessage(message?: string) {
@@ -753,12 +790,37 @@ function getMfaErrorMessage(message?: string) {
   }
 
   if (message.includes('AAL2')) {
-    return 'Du ma bekrefte en hoyere sikkerhetsokt for du kan fjerne denne faktoren.'
+    return 'Du må bekrefte identiteten din på nytt før du kan fjerne denne faktoren.'
   }
 
   if (message.includes('code')) {
-    return 'Koden ble ikke godkjent. Sjekk autentiseringsappen og prov igjen.'
+    return 'Koden ble ikke godkjent. Sjekk autentiseringsappen og prøv igjen.'
   }
 
   return 'Kunne ikke oppdatere tofaktorautentisering.'
+}
+
+function normalizeTotpQrSvg(qrCode: string) {
+  const trimmed = qrCode.trim()
+
+  if (!trimmed.startsWith('<svg')) {
+    return '<div class="panel-copy">QR-koden kunne ikke vises. Bruk oppsettslenken eller den manuelle hemmeligheten under.</div>'
+  }
+
+  let svg = trimmed
+
+  if (!svg.includes('xmlns=')) {
+    svg = svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
+  }
+
+  if (!svg.includes('viewBox') && svg.includes('width=') && svg.includes('height=')) {
+    const widthMatch = svg.match(/width="([^"]+)"/)
+    const heightMatch = svg.match(/height="([^"]+)"/)
+
+    if (widthMatch && heightMatch) {
+      svg = svg.replace('<svg', `<svg viewBox="0 0 ${widthMatch[1]} ${heightMatch[1]}"`)
+    }
+  }
+
+  return svg
 }
