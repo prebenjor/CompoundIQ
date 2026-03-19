@@ -21,8 +21,20 @@ import {
   type BudgetDashboardData,
 } from '@/lib/budget-data'
 
+function getTodayIsoDate() {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function getCurrentMonthValue() {
+  return getTodayIsoDate().slice(0, 7)
+}
+
 const EMPTY_FORM = {
-  transactionDate: new Date().toISOString().slice(0, 10),
+  transactionDate: getTodayIsoDate(),
   categoryId: '',
   merchant: '',
   amount: '',
@@ -48,6 +60,7 @@ export default function BudgetPlanner({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [newPeriodMonth, setNewPeriodMonth] = useState(getCurrentMonthValue())
 
   const categoryMap = useMemo(
     () => new Map(data.categories.map((category) => [category.id, category])),
@@ -131,13 +144,57 @@ export default function BudgetPlanner({
     }
   }
 
+  async function handleCreateSelectedPeriod() {
+    if (!newPeriodMonth) {
+      setError('Velg en måned først.')
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const period = await createBudgetPeriod(`${newPeriodMonth}-01`)
+      await reload(period.id)
+      setSuccess(`Perioden ${period.label} er klar og bruker samme kategorioppsett som sist.`)
+    } catch (createError) {
+      const message =
+        createError instanceof Error
+          ? getBudgetErrorMessage(createError.message)
+          : getBudgetErrorMessage()
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleGoToCurrentMonth() {
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const period = await createBudgetPeriod(`${getCurrentMonthValue()}-01`)
+      setNewPeriodMonth(getCurrentMonthValue())
+      await reload(period.id)
+      setSuccess(`Åpnet inneværende måned: ${period.label}.`)
+    } catch (loadError) {
+      const message =
+        loadError instanceof Error ? getBudgetErrorMessage(loadError.message) : getBudgetErrorMessage()
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleTransactionSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const amount = Number(transactionForm.amount)
 
     if (!transactionForm.categoryId || !transactionForm.merchant.trim() || amount <= 0) {
-      setError('Fyll inn kategori, beskrivelse og et gyldig belop for transaksjonen.')
+      setError('Fyll inn kategori, beskrivelse og et gyldig beløp for transaksjonen.')
       return
     }
 
@@ -198,7 +255,7 @@ export default function BudgetPlanner({
     const nextAmount = Number(budgetDrafts[category.id] ?? category.budgetedAmount)
 
     if (!Number.isFinite(nextAmount) || nextAmount < 0) {
-      setError('Budsjettbelopet maa vaere null eller positivt.')
+      setError('Budsjettbeløpet må være null eller positivt.')
       return
     }
 
@@ -242,7 +299,7 @@ export default function BudgetPlanner({
         )
       )
       setSuccess(
-        'CSV-importen er fullfort. Kjente merchants blir automatisk koblet mot lagrede regler.'
+        'CSV-importen er fullført. Kjente merchants blir automatisk koblet mot lagrede regler.'
       )
     } catch (importError) {
       const message =
@@ -288,9 +345,10 @@ export default function BudgetPlanner({
     <div className="dash-page">
       <div className="dash-header">
         <div>
-          <h1 className="dash-title">Budsjett og kontantstrom</h1>
+          <h1 className="dash-title">Budsjett og kontantstrøm</h1>
           <p className="dash-subtitle">
-            Folg plan mot faktisk per maned, importer kontoutskrifter og eksporter i flere formater.
+            Følg plan mot faktisk per måned, importer kontoutskrifter og eksporter i flere
+            formater.
           </p>
         </div>
         <div className="dash-actions budget-toolbar">
@@ -339,20 +397,51 @@ export default function BudgetPlanner({
                 ))}
               </select>
             </label>
+            <label>
+              Opprett eller åpne måned
+              <input
+                type="month"
+                value={newPeriodMonth}
+                onChange={(event) => setNewPeriodMonth(event.target.value)}
+                disabled={loading || saving}
+              />
+            </label>
           </div>
-          <div className="dash-actions">
+          <div className="dash-actions budget-period-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => void handleCreateSelectedPeriod()}
+              disabled={saving || !newPeriodMonth}
+            >
+              Åpne valgt måned
+            </button>
+            {data.currentPeriod.monthStart !== `${getCurrentMonthValue()}-01` ? (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => void handleGoToCurrentMonth()}
+                disabled={saving}
+              >
+                Gå til inneværende måned
+              </button>
+            ) : null}
             <button
               type="button"
               className="btn btn-outline"
               onClick={() => void handleCreateNextPeriod()}
               disabled={saving}
             >
-              Opprett neste maned
+              Opprett neste måned
             </button>
           </div>
-          <p className="panel-copy">
-            Gratisplanen far én budsjettarbeidsflate med CSV/JSON-import og eksport. Pro kan senere
-            utvide til flere budsjetter, deling, XLSX/PDF og dypere automatisering.
+          <p className="panel-copy budget-period-copy">
+            Nye måneder bruker samme kategorioppsett og budsjettverdier som du allerede har satt
+            opp, slik at du slipper å starte fra bunnen hver gang.
+          </p>
+          <p className="panel-copy budget-period-copy">
+            Gratisplanen får én budsjettarbeidsflate med CSV/JSON-import og eksport. Pro kan
+            senere utvide til flere budsjetter, deling, XLSX/PDF og dypere automatisering.
           </p>
           <div className="budget-plan-chip">Plan: {data.plan === 'free' ? 'Gratis' : 'Pro'}</div>
         </div>
@@ -439,7 +528,7 @@ export default function BudgetPlanner({
               Beskrivelse / merchant
               <input
                 value={transactionForm.merchant}
-                placeholder="Kiwi, Husleie, Lonn"
+                placeholder="Kiwi, Husleie, Lønn"
                 onChange={(event) =>
                   setTransactionForm((current) => ({
                     ...current,
@@ -450,7 +539,7 @@ export default function BudgetPlanner({
               />
             </label>
             <label>
-              Belop
+              Beløp
               <input
                 type="number"
                 min="0"
@@ -486,7 +575,7 @@ export default function BudgetPlanner({
           <div className="budget-helper-card">
             <strong>CSV-import</strong>
             <p className="panel-copy">
-              Stottede kolonner: <code>date</code>, <code>merchant</code>, <code>amount</code>,{' '}
+              Støttede kolonner: <code>date</code>, <code>merchant</code>, <code>amount</code>,{' '}
               <code>category</code>, <code>kind</code>, <code>note</code>.
             </p>
             <p className="panel-copy">
@@ -557,7 +646,9 @@ function MetricCard({
   return (
     <div className="stat-card">
       <span className="stat-label">{label}</span>
-      <span className={`stat-value stat-value-lg${accent ? ` metric-${accent}` : ''}`}>{value}</span>
+      <span className={`stat-value stat-value-lg${accent ? ` metric-${accent}` : ''}`}>
+        {value}
+      </span>
     </div>
   )
 }
@@ -599,18 +690,21 @@ function BudgetCategoryTable({
               </span>
             </div>
             <div className="budget-table-cell budget-table-cell-input">
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={drafts[row.category.id] ?? String(row.category.budgetedAmount)}
-                onChange={(event) =>
-                  onDraftChange((current) => ({
-                    ...current,
-                    [row.category.id]: event.target.value,
-                  }))
-                }
-              />
+              <label className="budget-amount-field">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={drafts[row.category.id] ?? String(row.category.budgetedAmount)}
+                  onChange={(event) =>
+                    onDraftChange((current) => ({
+                      ...current,
+                      [row.category.id]: event.target.value,
+                    }))
+                  }
+                />
+                <span>kr</span>
+              </label>
             </div>
             <div className="budget-table-cell budget-table-cell-meta">
               <span>{Math.round(row.utilizationPct)} % brukt</span>
