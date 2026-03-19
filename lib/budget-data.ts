@@ -77,6 +77,7 @@ export interface BudgetSavingsThread {
   availableToBsu: number
   availableToBuffer: number
   availableGeneralSavings: number
+  bsuEnabled: boolean
   bufferAllocationPct: number
   bsuAllocationPct: number
   investmentAllocationPct: number
@@ -112,6 +113,8 @@ export interface BudgetTransactionInput {
   amount: number
   source?: BudgetTransactionSource
 }
+
+export type BudgetExportLang = 'no' | 'en'
 
 interface ProfileRow {
   plan?: BudgetPlan | null
@@ -681,6 +684,356 @@ function formatCsvValue(value: string | number) {
   return stringValue
 }
 
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
+function columnToLetter(columnIndex: number) {
+  let result = ''
+  let index = columnIndex + 1
+
+  while (index > 0) {
+    const remainder = (index - 1) % 26
+    result = String.fromCharCode(65 + remainder) + result
+    index = Math.floor((index - 1) / 26)
+  }
+
+  return result
+}
+
+function crc32(input: Uint8Array) {
+  let crc = -1
+
+  for (let index = 0; index < input.length; index += 1) {
+    crc ^= input[index]
+
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1))
+    }
+  }
+
+  return (crc ^ -1) >>> 0
+}
+
+function concatUint8Arrays(chunks: Uint8Array[]) {
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  const output = new Uint8Array(totalLength)
+  let offset = 0
+
+  chunks.forEach((chunk) => {
+    output.set(chunk, offset)
+    offset += chunk.length
+  })
+
+  return output
+}
+
+function createStoredZip(files: Array<{ path: string; content: string }>) {
+  const encoder = new TextEncoder()
+  const localParts: Uint8Array[] = []
+  const centralParts: Uint8Array[] = []
+  let offset = 0
+
+  files.forEach((file) => {
+    const nameBytes = encoder.encode(file.path)
+    const dataBytes = encoder.encode(file.content)
+    const checksum = crc32(dataBytes)
+
+    const localHeader = new Uint8Array(30 + nameBytes.length)
+    const localView = new DataView(localHeader.buffer)
+    localView.setUint32(0, 0x04034b50, true)
+    localView.setUint16(4, 20, true)
+    localView.setUint16(6, 0, true)
+    localView.setUint16(8, 0, true)
+    localView.setUint16(10, 0, true)
+    localView.setUint16(12, 0, true)
+    localView.setUint32(14, checksum, true)
+    localView.setUint32(18, dataBytes.length, true)
+    localView.setUint32(22, dataBytes.length, true)
+    localView.setUint16(26, nameBytes.length, true)
+    localView.setUint16(28, 0, true)
+    localHeader.set(nameBytes, 30)
+
+    localParts.push(localHeader, dataBytes)
+
+    const centralHeader = new Uint8Array(46 + nameBytes.length)
+    const centralView = new DataView(centralHeader.buffer)
+    centralView.setUint32(0, 0x02014b50, true)
+    centralView.setUint16(4, 20, true)
+    centralView.setUint16(6, 20, true)
+    centralView.setUint16(8, 0, true)
+    centralView.setUint16(10, 0, true)
+    centralView.setUint16(12, 0, true)
+    centralView.setUint16(14, 0, true)
+    centralView.setUint32(16, checksum, true)
+    centralView.setUint32(20, dataBytes.length, true)
+    centralView.setUint32(24, dataBytes.length, true)
+    centralView.setUint16(28, nameBytes.length, true)
+    centralView.setUint16(30, 0, true)
+    centralView.setUint16(32, 0, true)
+    centralView.setUint16(34, 0, true)
+    centralView.setUint16(36, 0, true)
+    centralView.setUint32(38, 0, true)
+    centralView.setUint32(42, offset, true)
+    centralHeader.set(nameBytes, 46)
+
+    centralParts.push(centralHeader)
+    offset += localHeader.length + dataBytes.length
+  })
+
+  const centralDirectory = concatUint8Arrays(centralParts)
+  const localDirectory = concatUint8Arrays(localParts)
+  const endRecord = new Uint8Array(22)
+  const endView = new DataView(endRecord.buffer)
+  endView.setUint32(0, 0x06054b50, true)
+  endView.setUint16(4, 0, true)
+  endView.setUint16(6, 0, true)
+  endView.setUint16(8, files.length, true)
+  endView.setUint16(10, files.length, true)
+  endView.setUint32(12, centralDirectory.length, true)
+  endView.setUint32(16, localDirectory.length, true)
+  endView.setUint16(20, 0, true)
+
+  return concatUint8Arrays([localDirectory, centralDirectory, endRecord])
+}
+
+const BUDGET_EXPORT_LABELS: Record<
+  BudgetExportLang,
+  {
+    summarySheet: string
+    categoriesSheet: string
+    transactionsSheet: string
+    summaryTitle: string
+    period: string
+    workspace: string
+    plan: string
+    exportedAt: string
+    metricsLabel: string
+    metricsValue: string
+    incomeActual: string
+    expensesActual: string
+    savingsActual: string
+    netCashflow: string
+    incomePlanned: string
+    expensesPlanned: string
+    savingsPlanned: string
+    category: string
+    type: string
+    amount: string
+    budgeted: string
+    actual: string
+    remaining: string
+    usedPct: string
+    transactionCount: string
+    date: string
+    merchant: string
+    note: string
+    source: string
+    noTransactions: string
+    freePlan: string
+    proPlan: string
+  }
+> = {
+  no: {
+    summarySheet: 'Sammendrag',
+    categoriesSheet: 'Kategorier',
+    transactionsSheet: 'Transaksjoner',
+    summaryTitle: 'Budsjettoversikt',
+    period: 'Periode',
+    workspace: 'Arbeidsflate',
+    plan: 'Plan',
+    exportedAt: 'Eksportert',
+    metricsLabel: 'Nøkkeltall',
+    metricsValue: 'Verdi',
+    incomeActual: 'Faktiske inntekter',
+    expensesActual: 'Faktiske utgifter',
+    savingsActual: 'Faktisk sparing',
+    netCashflow: 'Netto kontantstrøm',
+    incomePlanned: 'Budsjetterte inntekter',
+    expensesPlanned: 'Budsjetterte utgifter',
+    savingsPlanned: 'Budsjettert sparing',
+    category: 'Kategori',
+    type: 'Type',
+    amount: 'Beløp',
+    budgeted: 'Budsjett',
+    actual: 'Faktisk',
+    remaining: 'Igjen',
+    usedPct: 'Brukt %',
+    transactionCount: 'Transaksjoner',
+    date: 'Dato',
+    merchant: 'Beskrivelse',
+    note: 'Notat',
+    source: 'Kilde',
+    noTransactions: 'Ingen transaksjoner i valgt periode',
+    freePlan: 'Gratis',
+    proPlan: 'Pro',
+  },
+  en: {
+    summarySheet: 'Summary',
+    categoriesSheet: 'Categories',
+    transactionsSheet: 'Transactions',
+    summaryTitle: 'Budget overview',
+    period: 'Period',
+    workspace: 'Workspace',
+    plan: 'Plan',
+    exportedAt: 'Exported',
+    metricsLabel: 'Metric',
+    metricsValue: 'Value',
+    incomeActual: 'Actual income',
+    expensesActual: 'Actual expenses',
+    savingsActual: 'Actual savings',
+    netCashflow: 'Net cashflow',
+    incomePlanned: 'Planned income',
+    expensesPlanned: 'Planned expenses',
+    savingsPlanned: 'Planned savings',
+    category: 'Category',
+    type: 'Type',
+    amount: 'Amount',
+    budgeted: 'Budgeted',
+    actual: 'Actual',
+    remaining: 'Remaining',
+    usedPct: 'Used %',
+    transactionCount: 'Transactions',
+    date: 'Date',
+    merchant: 'Description',
+    note: 'Note',
+    source: 'Source',
+    noTransactions: 'No transactions in the selected period',
+    freePlan: 'Free',
+    proPlan: 'Pro',
+  },
+}
+
+function localizeBudgetKind(kind: BudgetCategoryKind, lang: BudgetExportLang) {
+  if (lang === 'en') {
+    if (kind === 'income') return 'Income'
+    if (kind === 'savings') return 'Savings'
+    return 'Expense'
+  }
+
+  if (kind === 'income') return 'Inntekt'
+  if (kind === 'savings') return 'Sparing'
+  return 'Utgift'
+}
+
+function localizeBudgetSource(source: BudgetTransactionSource, lang: BudgetExportLang) {
+  if (lang === 'en') {
+    if (source === 'manual') return 'Manual'
+    if (source === 'csv_import') return 'CSV import'
+    return 'Smart rule'
+  }
+
+  if (source === 'manual') return 'Manuell'
+  if (source === 'csv_import') return 'CSV-import'
+  return 'Smart regel'
+}
+
+function buildBudgetExportSheets(data: BudgetDashboardData, lang: BudgetExportLang) {
+  const labels = BUDGET_EXPORT_LABELS[lang]
+  const categoryMap = new Map(data.categories.map((category) => [category.id, category]))
+  const summary = summarizeBudget(data.categories, data.transactions)
+  const categorySummaries = summarizeBudgetCategories(data.categories, data.transactions)
+
+  const summaryRows: Array<Array<string | number>> = [
+    [labels.summaryTitle, ''],
+    [labels.period, data.currentPeriod.label],
+    [labels.workspace, data.workspace.name],
+    [labels.plan, data.plan === 'free' ? labels.freePlan : labels.proPlan],
+    [labels.exportedAt, new Intl.DateTimeFormat(lang === 'no' ? 'nb-NO' : 'en-US', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date())],
+    [],
+    [labels.metricsLabel, labels.metricsValue],
+    [labels.incomeActual, formatBudgetCurrency(summary.totalIncome)],
+    [labels.expensesActual, formatBudgetCurrency(summary.totalExpenses)],
+    [labels.savingsActual, formatBudgetCurrency(summary.totalSavings)],
+    [labels.netCashflow, formatBudgetCurrency(summary.netCashflow)],
+    [labels.incomePlanned, formatBudgetCurrency(summary.plannedIncome)],
+    [labels.expensesPlanned, formatBudgetCurrency(summary.plannedExpenses)],
+    [labels.savingsPlanned, formatBudgetCurrency(summary.plannedSavings)],
+  ]
+
+  const categoryRows: Array<Array<string | number>> = [
+    [
+      labels.category,
+      labels.type,
+      labels.budgeted,
+      labels.actual,
+      labels.remaining,
+      labels.usedPct,
+      labels.transactionCount,
+    ],
+    ...categorySummaries.map((row) => [
+      row.category.name,
+      localizeBudgetKind(row.category.kind, lang),
+      formatBudgetCurrency(row.category.budgetedAmount),
+      formatBudgetCurrency(row.actualAmount),
+      formatBudgetCurrency(row.remainingAmount),
+      `${Math.round(row.utilizationPct)} %`,
+      data.transactions.filter((transaction) => transaction.categoryId === row.category.id).length,
+    ]),
+  ]
+
+  const transactionRows: Array<Array<string | number>> = [
+    [
+      labels.date,
+      labels.merchant,
+      labels.category,
+      labels.type,
+      labels.amount,
+      labels.note,
+      labels.source,
+    ],
+    ...(data.transactions.length > 0
+      ? data.transactions.map((transaction) => [
+          transaction.transactionDate,
+          transaction.merchant,
+          transaction.categoryId ? categoryMap.get(transaction.categoryId)?.name ?? '' : '',
+          localizeBudgetKind(transaction.kind, lang),
+          formatBudgetCurrency(transaction.amount),
+          transaction.note,
+          localizeBudgetSource(transaction.source, lang),
+        ])
+      : [[labels.noTransactions, '', '', '', '', '', '']]),
+  ]
+
+  return [
+    { name: labels.summarySheet, rows: summaryRows },
+    { name: labels.categoriesSheet, rows: categoryRows },
+    { name: labels.transactionsSheet, rows: transactionRows },
+  ]
+}
+
+function buildWorksheetXml(rows: Array<Array<string | number>>) {
+  const maxColumns = Math.max(...rows.map((row) => row.length), 1)
+  const lastCell = `${columnToLetter(maxColumns - 1)}${rows.length}`
+  const rowXml = rows
+    .map((row, rowIndex) => {
+      const cells = row
+        .map((value, columnIndex) => {
+          const ref = `${columnToLetter(columnIndex)}${rowIndex + 1}`
+          const text = escapeXml(String(value ?? ''))
+          return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${text}</t></is></c>`
+        })
+        .join('')
+
+      return `<row r="${rowIndex + 1}">${cells}</row>`
+    })
+    .join('')
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <dimension ref="A1:${lastCell}"/>
+  <sheetData>${rowXml}</sheetData>
+</worksheet>`
+}
+
 export async function fetchBudgetDashboardData(periodId?: string): Promise<BudgetDashboardData> {
   const { supabase, user, plan, workspace } = await ensurePrimaryWorkspace()
   const categories = await ensureDefaultCategories(supabase, user.id, workspace.id)
@@ -953,8 +1306,10 @@ export function deriveBudgetSavingsThread(
   const summary = summarizeBudget(categories, transactions)
   const availableToSave = Math.max(0, summary.plannedIncome - summary.plannedExpenses)
   const bufferRatio = Math.max(0, settings.bufferAllocationPct) / 100
-  const bsuRatio = Math.max(0, settings.bsuAllocationPct) / 100
-  const investmentRatio = Math.max(0, settings.investmentAllocationPct) / 100
+  const bsuRatio = settings.bsuEnabled ? Math.max(0, settings.bsuAllocationPct) / 100 : 0
+  const investmentRatio =
+    Math.max(0, settings.investmentAllocationPct + (settings.bsuEnabled ? 0 : settings.bsuAllocationPct)) /
+    100
   const monthlyBsuCap = 27500 / 12
 
   const availableToBuffer = availableToSave * bufferRatio
@@ -971,9 +1326,11 @@ export function deriveBudgetSavingsThread(
     availableToBsu,
     availableToBuffer,
     availableGeneralSavings,
+    bsuEnabled: settings.bsuEnabled,
     bufferAllocationPct: settings.bufferAllocationPct,
-    bsuAllocationPct: settings.bsuAllocationPct,
-    investmentAllocationPct: settings.investmentAllocationPct,
+    bsuAllocationPct: settings.bsuEnabled ? settings.bsuAllocationPct : 0,
+    investmentAllocationPct:
+      settings.investmentAllocationPct + (settings.bsuEnabled ? 0 : settings.bsuAllocationPct),
     plannedIncome: summary.plannedIncome,
     plannedExpenses: summary.plannedExpenses,
     plannedSavings: summary.plannedSavings,
@@ -1072,33 +1429,126 @@ export function buildBudgetJsonExport(data: BudgetDashboardData) {
   )
 }
 
-export function buildBudgetCsvExport(data: BudgetDashboardData) {
-  const categoryMap = new Map(data.categories.map((category) => [category.id, category]))
-  const headers = [
-    'date',
-    'merchant',
-    'category',
-    'kind',
-    'amount',
-    'note',
-    'source',
-  ]
-
-  const rows = data.transactions.map((transaction) =>
-    [
-      transaction.transactionDate,
-      transaction.merchant,
-      transaction.categoryId ? categoryMap.get(transaction.categoryId)?.name ?? '' : '',
-      transaction.kind,
-      transaction.amount.toFixed(2),
-      transaction.note,
-      transaction.source,
-    ]
-      .map(formatCsvValue)
-      .join(',')
+export function buildBudgetCsvExport(data: BudgetDashboardData, lang: BudgetExportLang = 'no') {
+  const sheets = buildBudgetExportSheets(data, lang)
+  const sections = sheets.map((sheet) =>
+    [sheet.name, ...sheet.rows.map((row) => row.map(formatCsvValue).join(','))].join('\n')
   )
 
-  return [headers.join(','), ...rows].join('\n')
+  return `\uFEFF${sections.join('\n\n')}`
+}
+
+export function buildBudgetXlsxExport(data: BudgetDashboardData, lang: BudgetExportLang = 'no') {
+  const sheets = buildBudgetExportSheets(data, lang)
+  const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <sheets>
+    ${sheets
+      .map(
+        (sheet, index) =>
+          `<sheet name="${escapeXml(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`
+      )
+      .join('')}
+  </sheets>
+</workbook>`
+
+  const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  ${sheets
+    .map(
+      (_sheet, index) =>
+        `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`
+    )
+    .join('')}
+</Relationships>`
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+  ${sheets
+    .map(
+      (_sheet, index) =>
+        `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`
+    )
+    .join('')}
+</Types>`
+
+  const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`
+
+  const archive = createStoredZip([
+    { path: '[Content_Types].xml', content: contentTypesXml },
+    { path: '_rels/.rels', content: rootRelsXml },
+    { path: 'xl/workbook.xml', content: workbookXml },
+    { path: 'xl/_rels/workbook.xml.rels', content: workbookRelsXml },
+    ...sheets.map((sheet, index) => ({
+      path: `xl/worksheets/sheet${index + 1}.xml`,
+      content: buildWorksheetXml(sheet.rows),
+    })),
+  ])
+
+  return new Blob([archive], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+}
+
+export function buildBudgetPrintHtml(data: BudgetDashboardData, lang: BudgetExportLang = 'no') {
+  const sheets = buildBudgetExportSheets(data, lang)
+  const labels = BUDGET_EXPORT_LABELS[lang]
+  const sectionHtml = sheets
+    .map(
+      (sheet) => `
+        <section class="report-section">
+          <h2>${escapeXml(sheet.name)}</h2>
+          <table>
+            <tbody>
+              ${sheet.rows
+                .map(
+                  (row, rowIndex) => `
+                    <tr>
+                      ${row
+                        .map((cell) =>
+                          rowIndex === 0 && sheet !== sheets[0]
+                            ? `<th>${escapeXml(String(cell ?? ''))}</th>`
+                            : `<td>${escapeXml(String(cell ?? ''))}</td>`
+                        )
+                        .join('')}
+                    </tr>`
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </section>`
+    )
+    .join('')
+
+  return `<!doctype html>
+<html lang="${lang}">
+  <head>
+    <meta charset="utf-8" />
+    <title>${escapeXml(labels.summaryTitle)} - ${escapeXml(data.currentPeriod.label)}</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; color: #111827; margin: 32px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      p { margin: 0 0 18px; color: #4b5563; }
+      .report-section { margin-top: 28px; }
+      h2 { margin: 0 0 10px; font-size: 18px; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; vertical-align: top; }
+      th { background: #f3f4f6; font-weight: 700; }
+      @media print { body { margin: 18px; } }
+    </style>
+  </head>
+  <body>
+    <h1>${escapeXml(labels.summaryTitle)}</h1>
+    <p>${escapeXml(data.currentPeriod.label)} · ${escapeXml(data.workspace.name)}</p>
+    ${sectionHtml}
+  </body>
+</html>`
 }
 
 export function formatBudgetCurrency(value: number) {

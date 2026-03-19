@@ -2,16 +2,24 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
+  getStoredExportLanguage,
+  resolveExportLanguage,
+  setStoredExportLanguage,
+  type ExportLanguagePreference,
+} from '@/lib/client-preferences'
+import {
   defaultDashboardSettings,
   fetchDashboardSettingsBundle,
   formatCurrency,
   getBudgetAllocationTotal,
   getDataErrorMessage,
+  saveProfileLanguage,
   saveAccountPreferences,
   saveDashboardSettings,
   type AccountPreferences,
   type DashboardSettings,
 } from '@/lib/dashboard-data'
+import { useLang, type Lang } from '@/lib/i18n'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
 interface MfaFactor {
@@ -70,16 +78,22 @@ const preferenceFields: Array<{
 ]
 
 export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
+  const { lang, setLang } = useLang()
   const [activeSettings, setActiveSettings] = useState<DashboardSettings>(
     defaultDashboardSettings
   )
   const [draft, setDraft] = useState<DashboardSettings>(defaultDashboardSettings)
   const [preferences, setPreferences] = useState<AccountPreferences | null>(null)
+  const [languageDraft, setLanguageDraft] = useState<Lang>(lang)
+  const [exportLanguageDraft, setExportLanguageDraft] =
+    useState<ExportLanguagePreference>('app')
   const [loading, setLoading] = useState(true)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [preferencesSaving, setPreferencesSaving] = useState(false)
+  const [displaySaving, setDisplaySaving] = useState(false)
   const [settingsMessage, setSettingsMessage] = useState<string | null>(null)
   const [preferencesMessage, setPreferencesMessage] = useState<string | null>(null)
+  const [displayMessage, setDisplayMessage] = useState<string | null>(null)
   const [dataError, setDataError] = useState<string | null>(null)
   const [securityMessage, setSecurityMessage] = useState<string | null>(null)
   const [securityError, setSecurityError] = useState<string | null>(null)
@@ -112,6 +126,9 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
         setActiveSettings(bundle.settings)
         setDraft(bundle.settings)
         setPreferences(bundle.preferences)
+        setLanguageDraft(bundle.language)
+        setExportLanguageDraft(getStoredExportLanguage())
+        setLang(bundle.language)
       } catch (error) {
         if (!active) {
           return
@@ -132,7 +149,7 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
     return () => {
       active = false
     }
-  }, [])
+  }, [setLang])
 
   useEffect(() => {
     if (!userEmail) {
@@ -180,6 +197,10 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
       ignore = true
     }
   }, [userEmail])
+
+  useEffect(() => {
+    setLanguageDraft(lang)
+  }, [lang])
 
   const verifiedTotpFactor = useMemo(
     () =>
@@ -283,6 +304,25 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
       setDataError(message)
     } finally {
       setPreferencesSaving(false)
+    }
+  }
+
+  async function saveDisplayPreferences() {
+    setDisplaySaving(true)
+    setDisplayMessage(null)
+    setDataError(null)
+
+    try {
+      await saveProfileLanguage(languageDraft)
+      setLang(languageDraft)
+      setStoredExportLanguage(exportLanguageDraft)
+      setDisplayMessage('Språk og visningsvalg ble lagret.')
+    } catch (error) {
+      const message =
+        error instanceof Error ? getDataErrorMessage(error.message) : getDataErrorMessage()
+      setDataError(message)
+    } finally {
+      setDisplaySaving(false)
     }
   }
 
@@ -557,9 +597,23 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
                   <strong className="settings-toggle-title">Fordeling fra budsjett</strong>
                   <span className="stat-label">Totalt {allocationTotal.toFixed(0)} %</span>
                 </div>
+                <label className="settings-inline-toggle">
+                  <span>
+                    <strong className="settings-toggle-title">BSU-planlegging</strong>
+                    <span className="panel-copy">
+                      Slå av BSU dersom dette ikke er relevant, for eksempel fordi du er over aldersgrensen.
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={draft.bsuEnabled}
+                    onChange={(event) => updateSetting('bsuEnabled', event.target.checked)}
+                  />
+                </label>
                 <p className="panel-copy">
-                  Velg hvor stort månedlig overskudd som skal foreslås til buffer, BSU og
-                  investering. Resten blir stående som fritt overskudd.
+                  {draft.bsuEnabled
+                    ? 'Velg hvor stort månedlig overskudd som skal foreslås til buffer, BSU og investering. Resten blir stående som fritt overskudd.'
+                    : 'Velg hvor stort månedlig overskudd som skal foreslås til buffer og investering. Resten blir stående som fritt overskudd.'}
                 </p>
                 <div className="dashboard-form-row dashboard-form-row-three">
                   <label>
@@ -575,19 +629,21 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
                       }
                     />
                   </label>
-                  <label>
-                    BSU %
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={draft.bsuAllocationPct}
-                      onChange={(event) =>
-                        updateSetting('bsuAllocationPct', Number(event.target.value))
-                      }
-                    />
-                  </label>
+                  {draft.bsuEnabled ? (
+                    <label>
+                      BSU %
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={draft.bsuAllocationPct}
+                        onChange={(event) =>
+                          updateSetting('bsuAllocationPct', Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  ) : null}
                   <label>
                     Investering %
                     <input
@@ -603,7 +659,9 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
                   </label>
                 </div>
                 <p className="panel-copy">
-                  Standardoppsettet er 20 % buffer, 30 % BSU og 50 % investering.
+                  {draft.bsuEnabled
+                    ? 'Standardoppsettet er 20 % buffer, 30 % BSU og 50 % investering.'
+                    : 'Når BSU er slått av, går tidligere BSU-andel automatisk inn i investering i forslagene.'}
                 </p>
               </div>
               <div className="dash-actions">
@@ -643,7 +701,9 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
               <span className="stat-label">Budsjettfordeling</span>
               <strong>
                 {activeSettings.bufferAllocationPct.toFixed(0)} % buffer ·{' '}
-                {activeSettings.bsuAllocationPct.toFixed(0)} % BSU ·{' '}
+                {activeSettings.bsuEnabled
+                  ? `${activeSettings.bsuAllocationPct.toFixed(0)} % BSU · `
+                  : 'BSU av · '}
                 {activeSettings.investmentAllocationPct.toFixed(0)} % investering
               </strong>
             </div>
@@ -661,6 +721,57 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
             <p className="panel-copy">Laster preferansene dine...</p>
           ) : (
             <>
+              <div className="settings-display-block">
+                <div className="dash-header-row">
+                  <strong className="settings-toggle-title">Språk og visning</strong>
+                  <span className="stat-label">
+                    Eksport følger{' '}
+                    {resolveExportLanguage(lang, exportLanguageDraft) === 'no' ? 'norsk' : 'english'}
+                  </span>
+                </div>
+                <p className="panel-copy">
+                  Velg språk for appen og hvilket språk eksportene skal bruke som standard.
+                </p>
+                <div className="dashboard-form-row">
+                  <label>
+                    Appspråk
+                    <select
+                      value={languageDraft}
+                      onChange={(event) => setLanguageDraft(event.target.value as Lang)}
+                      disabled={displaySaving}
+                    >
+                      <option value="no">Norsk</option>
+                      <option value="en">English</option>
+                    </select>
+                  </label>
+                  <label>
+                    Eksportspråk
+                    <select
+                      value={exportLanguageDraft}
+                      onChange={(event) =>
+                        setExportLanguageDraft(event.target.value as ExportLanguagePreference)
+                      }
+                      disabled={displaySaving}
+                    >
+                      <option value="app">Følg appspråk</option>
+                      <option value="no">Alltid norsk</option>
+                      <option value="en">Always English</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="dash-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    onClick={() => void saveDisplayPreferences()}
+                    disabled={displaySaving}
+                  >
+                    {displaySaving ? 'Lagrer...' : 'Lagre språkvalg'}
+                  </button>
+                </div>
+                {displayMessage ? <p className="panel-copy">{displayMessage}</p> : null}
+              </div>
+
               <div className="settings-toggle-list">
                 {preferenceFields.map((field) => (
                   <button

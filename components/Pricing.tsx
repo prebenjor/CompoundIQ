@@ -62,7 +62,9 @@ export default function Pricing() {
                 </li>
               ))}
             </ul>
-            <a href="#waitlist" className="btn btn-outline btn-full">{t('plan-free-cta')}</a>
+            <a href="#waitlist" className="btn btn-outline btn-full">
+              {t('plan-free-cta')}
+            </a>
           </div>
 
           <div className="pricing-card pricing-card-featured">
@@ -84,7 +86,9 @@ export default function Pricing() {
                 </li>
               ))}
             </ul>
-            <a href="#waitlist" className="btn btn-primary btn-full">{t('plan-pro-cta')}</a>
+            <a href="#waitlist" className="btn btn-primary btn-full">
+              {t('plan-pro-cta')}
+            </a>
           </div>
         </div>
       </div>

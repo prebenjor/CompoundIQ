@@ -43,6 +43,10 @@ export default function PortfolioManager() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const accountOptions = useMemo(
+    () => ACCOUNT_OPTIONS.filter((option) => settings.bsuEnabled || option !== 'BSU'),
+    [settings.bsuEnabled]
+  )
 
   useEffect(() => {
     let active = true
@@ -165,7 +169,9 @@ export default function PortfolioManager() {
     setError(null)
 
     try {
-      const next = await replacePortfolioHoldings(sampleHoldings)
+      const next = await replacePortfolioHoldings(
+        sampleHoldings.filter((holding) => settings.bsuEnabled || holding.accountType !== 'BSU')
+      )
       setHoldings(next)
     } catch (sampleError) {
       const message =
@@ -252,9 +258,9 @@ export default function PortfolioManager() {
               value={formatBudgetCurrency(budgetThread.availableToInvest)}
             />
             <MetricCard
-              label="Til buffer og BSU"
+              label={settings.bsuEnabled ? 'Til buffer og BSU' : 'Til buffer'}
               value={formatBudgetCurrency(
-                budgetThread.availableToBuffer + budgetThread.availableToBsu
+                budgetThread.availableToBuffer + (settings.bsuEnabled ? budgetThread.availableToBsu : 0)
               )}
             />
             <MetricCard
@@ -323,7 +329,7 @@ export default function PortfolioManager() {
                     }))
                   }
                 >
-                  {ACCOUNT_OPTIONS.map((option) => (
+                  {accountOptions.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>

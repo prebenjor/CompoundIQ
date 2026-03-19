@@ -6,7 +6,7 @@ import {
   formatBudgetCurrency,
   type BudgetSavingsThread,
 } from '@/lib/budget-data'
-import { formatCurrency } from '@/lib/dashboard-data'
+import { fetchDashboardSettingsBundle, formatCurrency } from '@/lib/dashboard-data'
 
 const ASK_TAX_RATE = 0.3784
 
@@ -53,27 +53,35 @@ export default function AskBsuPlanner() {
   const [expectedReturn, setExpectedReturn] = useState(8)
   const [comparisonYears, setComparisonYears] = useState(10)
   const [budgetThread, setBudgetThread] = useState<BudgetSavingsThread | null>(null)
+  const [bsuEnabled, setBsuEnabled] = useState(true)
 
   useEffect(() => {
     let active = true
 
-    async function loadBudgetThread() {
+    async function loadPlannerState() {
       try {
-        const thread = await fetchBudgetSavingsThread()
+        const [thread, bundle] = await Promise.all([
+          fetchBudgetSavingsThread(),
+          fetchDashboardSettingsBundle(),
+        ])
 
         if (!active) {
           return
         }
 
         setBudgetThread(thread)
+        setBsuEnabled(bundle.settings.bsuEnabled)
       } catch {
-        if (active) {
-          setBudgetThread(null)
+        if (!active) {
+          return
         }
+
+        setBudgetThread(null)
+        setBsuEnabled(true)
       }
     }
 
-    void loadBudgetThread()
+    void loadPlannerState()
 
     return () => {
       active = false
@@ -127,16 +135,21 @@ export default function AskBsuPlanner() {
     }
 
     setMonthlySavings(Math.round(budgetThread.availableToInvest))
-    setAnnualContribution(Math.min(27500, Math.round(budgetThread.availableToBsu * 12)))
+
+    if (bsuEnabled) {
+      setAnnualContribution(Math.min(27500, Math.round(budgetThread.availableToBsu * 12)))
+    }
   }
 
   return (
     <div className="dash-page">
       <div className="dash-header">
         <div>
-          <h1 className="dash-title">ASK og BSU-planner</h1>
+          <h1 className="dash-title">{bsuEnabled ? 'ASK og BSU-planner' : 'ASK-planner'}</h1>
           <p className="dash-subtitle">
-            Test egne satser og se hvordan ulike sparevalg slår ut over tid.
+            {bsuEnabled
+              ? 'Test egne satser og se hvordan ulike sparevalg slår ut over tid.'
+              : 'Test egne satser og se hvordan ASK-sparing slår ut over tid.'}
           </p>
         </div>
       </div>
@@ -149,19 +162,21 @@ export default function AskBsuPlanner() {
               Bruk budsjettfordeling
             </button>
           </div>
-          <div className="dash-stats dash-stats-three">
+          <div className={`dash-stats ${bsuEnabled ? 'dash-stats-three' : 'dash-stats-two'}`}>
+            {bsuEnabled ? (
+              <div className="stat-card">
+                <span className="stat-label">Til BSU per måned</span>
+                <span className="stat-value stat-value-lg">
+                  {formatBudgetCurrency(budgetThread.availableToBsu)}
+                </span>
+                <span className="stat-hint">
+                  {budgetThread.bsuAllocationPct.toFixed(0)} % av overskuddet, opptil{' '}
+                  {formatBudgetCurrency(budgetThread.availableToBsu * 12)} i året.
+                </span>
+              </div>
+            ) : null}
             <div className="stat-card">
-              <span className="stat-label">Til BSU per maaned</span>
-              <span className="stat-value stat-value-lg">
-                {formatBudgetCurrency(budgetThread.availableToBsu)}
-              </span>
-              <span className="stat-hint">
-                {budgetThread.bsuAllocationPct.toFixed(0)} % av overskuddet, opptil{' '}
-                {formatBudgetCurrency(budgetThread.availableToBsu * 12)} i aaret.
-              </span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-label">Til buffer per maaned</span>
+              <span className="stat-label">Til buffer per måned</span>
               <span className="stat-value stat-value-lg">
                 {formatBudgetCurrency(budgetThread.availableToBuffer)}
               </span>
@@ -170,7 +185,7 @@ export default function AskBsuPlanner() {
               </span>
             </div>
             <div className="stat-card">
-              <span className="stat-label">Til investering per maaned</span>
+              <span className="stat-label">Til investering per måned</span>
               <span className="stat-value stat-value-lg">
                 {formatBudgetCurrency(budgetThread.availableToInvest)}
               </span>
@@ -184,72 +199,74 @@ export default function AskBsuPlanner() {
       ) : null}
 
       <div className="dashboard-grid">
-        <div className="dashboard-panel">
-          <h2 className="dash-section-title">BSU-plan</h2>
-          <div className="dashboard-form">
-            <label>
-              Nåværende BSU-saldo
-              <input
-                type="number"
-                value={bsuBalance}
-                onChange={(event) => setBsuBalance(Number(event.target.value))}
-              />
-            </label>
-            <div className="dashboard-form-row">
+        {bsuEnabled ? (
+          <div className="dashboard-panel">
+            <h2 className="dash-section-title">BSU-plan</h2>
+            <div className="dashboard-form">
               <label>
-                Årlig innskudd
+                Nåværende BSU-saldo
                 <input
                   type="number"
-                  value={annualContribution}
-                  onChange={(event) => setAnnualContribution(Number(event.target.value))}
+                  value={bsuBalance}
+                  onChange={(event) => setBsuBalance(Number(event.target.value))}
                 />
               </label>
-              <label>
-                Årlig avkastning
-                <input
-                  type="number"
-                  step="0.1"
-                  value={bsuReturn}
-                  onChange={(event) => setBsuReturn(Number(event.target.value))}
-                />
-              </label>
+              <div className="dashboard-form-row">
+                <label>
+                  Årlig innskudd
+                  <input
+                    type="number"
+                    value={annualContribution}
+                    onChange={(event) => setAnnualContribution(Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  Årlig avkastning
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={bsuReturn}
+                    onChange={(event) => setBsuReturn(Number(event.target.value))}
+                  />
+                </label>
+              </div>
+              <div className="dashboard-form-row">
+                <label>
+                  År til mål
+                  <input
+                    type="number"
+                    min="1"
+                    value={yearsToGoal}
+                    onChange={(event) => setYearsToGoal(Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  Skattefordel
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={taxDeduction}
+                    onChange={(event) => setTaxDeduction(Number(event.target.value))}
+                  />
+                </label>
+              </div>
             </div>
-            <div className="dashboard-form-row">
-              <label>
-                År til mål
-                <input
-                  type="number"
-                  min="1"
-                  value={yearsToGoal}
-                  onChange={(event) => setYearsToGoal(Number(event.target.value))}
-                />
-              </label>
-              <label>
-                Skattefordel
-                <input
-                  type="number"
-                  step="0.1"
-                  value={taxDeduction}
-                  onChange={(event) => setTaxDeduction(Number(event.target.value))}
-                />
-              </label>
+            <div className="insight-list">
+              <div className="insight-card">
+                <span className="stat-label">Estimert BSU-verdi</span>
+                <strong>{formatCurrency(bsuProjection.projectedBalance)}</strong>
+              </div>
+              <div className="insight-card">
+                <span className="stat-label">Planlagte innskudd</span>
+                <strong>{formatCurrency(bsuProjection.totalContributions)}</strong>
+              </div>
+              <div className="insight-card">
+                <span className="stat-label">Estimert skattefordel</span>
+                <strong>{formatCurrency(bsuProjection.estimatedDeduction)}</strong>
+              </div>
             </div>
           </div>
-          <div className="insight-list">
-            <div className="insight-card">
-              <span className="stat-label">Estimert BSU-verdi</span>
-              <strong>{formatCurrency(bsuProjection.projectedBalance)}</strong>
-            </div>
-            <div className="insight-card">
-              <span className="stat-label">Planlagte innskudd</span>
-              <strong>{formatCurrency(bsuProjection.totalContributions)}</strong>
-            </div>
-            <div className="insight-card">
-              <span className="stat-label">Estimert skattefordel</span>
-              <strong>{formatCurrency(bsuProjection.estimatedDeduction)}</strong>
-            </div>
-          </div>
-        </div>
+        ) : null}
 
         <div className="dashboard-panel">
           <h2 className="dash-section-title">ASK mot skattepliktig konto</h2>
@@ -303,9 +320,7 @@ export default function AskBsuPlanner() {
             <div className="insight-card">
               <span className="stat-label">Forskjell</span>
               <strong
-                className={
-                  askComparison.advantage >= 0 ? 'metric-positive' : 'metric-negative'
-                }
+                className={askComparison.advantage >= 0 ? 'metric-positive' : 'metric-negative'}
               >
                 {formatCurrency(askComparison.advantage)}
               </strong>

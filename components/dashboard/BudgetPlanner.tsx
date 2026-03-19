@@ -2,8 +2,11 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { useMemo, useState } from 'react'
+import { getStoredExportLanguage, resolveExportLanguage } from '@/lib/client-preferences'
 import {
   buildBudgetCsvExport,
+  buildBudgetPrintHtml,
+  buildBudgetXlsxExport,
   buildBudgetInsights,
   buildBudgetJsonExport,
   createBudgetPeriod,
@@ -20,6 +23,7 @@ import {
   type BudgetCategoryKind,
   type BudgetDashboardData,
 } from '@/lib/budget-data'
+import { useLang } from '@/lib/i18n'
 
 function getTodayIsoDate() {
   const now = new Date()
@@ -46,6 +50,7 @@ export default function BudgetPlanner({
 }: {
   initialData: BudgetDashboardData
 }) {
+  const { lang } = useLang()
   const [data, setData] = useState(initialData)
   const [transactionForm, setTransactionForm] = useState(() => ({
     ...EMPTY_FORM,
@@ -313,8 +318,8 @@ export default function BudgetPlanner({
     }
   }
 
-  function downloadExport(filename: string, content: string, type: string) {
-    const blob = new Blob([content], { type })
+  function downloadExport(filename: string, content: Blob | BlobPart, type?: string) {
+    const blob = content instanceof Blob ? content : new Blob([content], { type })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
@@ -334,11 +339,40 @@ export default function BudgetPlanner({
   }
 
   function handleExportCsv() {
+    const exportLang = resolveExportLanguage(lang, getStoredExportLanguage())
     downloadExport(
       `compoundiq-budget-${data.currentPeriod.monthStart}.csv`,
-      buildBudgetCsvExport(data),
+      buildBudgetCsvExport(data, exportLang),
       'text/csv;charset=utf-8'
     )
+  }
+
+  function handleExportXlsx() {
+    const exportLang = resolveExportLanguage(lang, getStoredExportLanguage())
+    downloadExport(
+      `compoundiq-budget-${data.currentPeriod.monthStart}.xlsx`,
+      buildBudgetXlsxExport(data, exportLang)
+    )
+  }
+
+  function handleExportPdf() {
+    const exportLang = resolveExportLanguage(lang, getStoredExportLanguage())
+    const exportWindow = window.open('', '_blank', 'noopener,noreferrer')
+
+    if (!exportWindow) {
+      setError(
+        lang === 'no'
+          ? 'Nettleseren blokkerte PDF-vinduet. Tillat popup-vinduer og prøv igjen.'
+          : 'The browser blocked the PDF window. Allow pop-ups and try again.'
+      )
+      return
+    }
+
+    exportWindow.document.open()
+    exportWindow.document.write(buildBudgetPrintHtml(data, exportLang))
+    exportWindow.document.close()
+    exportWindow.focus()
+    window.setTimeout(() => exportWindow.print(), 250)
   }
 
   return (
@@ -355,6 +389,12 @@ export default function BudgetPlanner({
           <button type="button" className="btn btn-outline" onClick={handleExportCsv}>
             Eksporter CSV
           </button>
+          <button type="button" className="btn btn-outline" onClick={handleExportXlsx}>
+            Eksporter XLSX
+          </button>
+          <button type="button" className="btn btn-outline" onClick={handleExportPdf}>
+            Eksporter PDF
+          </button>
           <button type="button" className="btn btn-outline" onClick={handleExportJson}>
             Eksporter JSON
           </button>
@@ -369,13 +409,32 @@ export default function BudgetPlanner({
       {success ? <div className="auth-success-inline">{success}</div> : null}
 
       <div className="dash-stats dash-stats-four">
-        <MetricCard label="Inntekter" value={formatBudgetCurrency(summary.totalIncome)} />
-        <MetricCard label="Utgifter" value={formatBudgetCurrency(summary.totalExpenses)} />
-        <MetricCard label="Sparing" value={formatBudgetCurrency(summary.totalSavings)} />
+        <MetricCard
+          label="Inntekter"
+          value={formatBudgetCurrency(summary.plannedIncome)}
+          hint={`Faktisk ${formatBudgetCurrency(summary.totalIncome)}`}
+        />
+        <MetricCard
+          label="Utgifter"
+          value={formatBudgetCurrency(summary.plannedExpenses)}
+          hint={`Faktisk ${formatBudgetCurrency(summary.totalExpenses)}`}
+        />
+        <MetricCard
+          label="Sparing"
+          value={formatBudgetCurrency(summary.plannedSavings)}
+          hint={`Faktisk ${formatBudgetCurrency(summary.totalSavings)}`}
+        />
         <MetricCard
           label="Netto igjen"
-          value={formatBudgetCurrency(summary.netCashflow)}
-          accent={summary.netCashflow >= 0 ? 'positive' : 'negative'}
+          value={formatBudgetCurrency(
+            summary.plannedIncome - summary.plannedExpenses - summary.plannedSavings
+          )}
+          hint={`Faktisk ${formatBudgetCurrency(summary.netCashflow)}`}
+          accent={
+            summary.plannedIncome - summary.plannedExpenses - summary.plannedSavings >= 0
+              ? 'positive'
+              : 'negative'
+          }
         />
       </div>
 
@@ -440,8 +499,8 @@ export default function BudgetPlanner({
             opp, slik at du slipper å starte fra bunnen hver gang.
           </p>
           <p className="panel-copy budget-period-copy">
-            Gratisplanen får én budsjettarbeidsflate med CSV/JSON-import og eksport. Pro kan
-            senere utvide til flere budsjetter, deling, XLSX/PDF og dypere automatisering.
+            Gratisplanen får én budsjettarbeidsflate med CSV/JSON-import og eksport til CSV, XLSX
+            og PDF. Pro kan senere utvide til flere budsjetter, deling og dypere automatisering.
           </p>
           <div className="budget-plan-chip">Plan: {data.plan === 'free' ? 'Gratis' : 'Pro'}</div>
         </div>
@@ -637,10 +696,12 @@ export default function BudgetPlanner({
 function MetricCard({
   label,
   value,
+  hint,
   accent,
 }: {
   label: string
   value: string
+  hint?: string
   accent?: 'positive' | 'negative'
 }) {
   return (
@@ -649,6 +710,7 @@ function MetricCard({
       <span className={`stat-value stat-value-lg${accent ? ` metric-${accent}` : ''}`}>
         {value}
       </span>
+      {hint ? <span className="stat-hint">{hint}</span> : null}
     </div>
   )
 }

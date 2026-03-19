@@ -18,8 +18,9 @@ export default function DashboardUpgradePage() {
           <ul className="dash-checklist">
             <li>Manuell portefølje og kalkulator for ASK, fond/aksjer og bank</li>
             <li>ASK/BSU-planner, realverdi, uttak og scenario-sammenligning</li>
-            <li>Import og eksport av JSON, CSV og regnearkvennlig CSV</li>
+            <li>Import av CSV/JSON og eksport til CSV, XLSX og PDF</li>
             <li>Lokal lagring av flere scenarioer og standardinnstillinger</li>
+            <li>Én budsjettarbeidsflate inkludert</li>
           </ul>
         </div>
         <div className="dashboard-panel">
@@ -27,7 +28,7 @@ export default function DashboardUpgradePage() {
           <ul className="dash-checklist">
             <li>Synkronisering mellom enheter og ubegrensede porteføljer</li>
             <li>Bedre CSV-import, delbare lenker og sterkere eksportflyt</li>
-            <li>Eksport til PDF, CSV og JSON med rapportmaler</li>
+            <li>Eksport til PDF, CSV, JSON og XLSX med rapportmaler</li>
             <li>Åpne data-innsikter, målsporing, varsler og husstandsdeling</li>
           </ul>
           <Link href="/dashboard/integrations" className="btn btn-primary">

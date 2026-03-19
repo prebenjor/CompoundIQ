@@ -27,6 +27,7 @@ create table if not exists public.user_settings (
   monthly_contribution numeric(12, 2) not null default 3000,
   expected_return numeric(6, 2) not null default 8,
   inflation numeric(6, 2) not null default 2.5,
+  bsu_enabled boolean not null default true,
   buffer_allocation_pct numeric(5, 2) not null default 20,
   bsu_allocation_pct numeric(5, 2) not null default 30,
   investment_allocation_pct numeric(5, 2) not null default 50,
@@ -38,6 +39,9 @@ create table if not exists public.user_settings (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table if exists public.user_settings
+  add column if not exists bsu_enabled boolean not null default true;
 
 alter table if exists public.user_settings
   add column if not exists buffer_allocation_pct numeric(5, 2) not null default 20;
@@ -154,6 +158,24 @@ create index if not exists budget_transactions_period_idx
 create index if not exists budget_transactions_category_idx
   on public.budget_transactions (category_id, transaction_date desc);
 
+create table if not exists public.user_goals (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  goal_type text not null check (goal_type in ('emergency_fund', 'bsu_annual')),
+  title text not null,
+  target_amount numeric(12, 2) not null default 0,
+  current_amount numeric(12, 2) not null default 0,
+  target_date date,
+  status text not null default 'active' check (status in ('active', 'completed', 'paused')),
+  priority integer not null default 100,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, goal_type)
+);
+
+create index if not exists user_goals_user_id_idx
+  on public.user_goals (user_id, priority asc, created_at asc);
+
 create or replace function public.handle_updated_at()
 returns trigger
 language plpgsql
@@ -204,6 +226,11 @@ create trigger budget_transactions_updated_at
   before update on public.budget_transactions
   for each row execute procedure public.handle_updated_at();
 
+drop trigger if exists user_goals_updated_at on public.user_goals;
+create trigger user_goals_updated_at
+  before update on public.user_goals
+  for each row execute procedure public.handle_updated_at();
+
 -- Auto-create profile when a new user signs up
 create or replace function public.handle_new_user()
 returns trigger
@@ -238,6 +265,7 @@ alter table public.budget_periods enable row level security;
 alter table public.budget_categories enable row level security;
 alter table public.budget_rules enable row level security;
 alter table public.budget_transactions enable row level security;
+alter table public.user_goals enable row level security;
 
 drop policy if exists "service role only" on public.waitlist;
 create policy "service role only"
@@ -424,5 +452,30 @@ create policy "Users can update own budget transactions"
 drop policy if exists "Users can delete own budget transactions" on public.budget_transactions;
 create policy "Users can delete own budget transactions"
   on public.budget_transactions
+  for delete
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can view own goals" on public.user_goals;
+create policy "Users can view own goals"
+  on public.user_goals
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own goals" on public.user_goals;
+create policy "Users can insert own goals"
+  on public.user_goals
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own goals" on public.user_goals;
+create policy "Users can update own goals"
+  on public.user_goals
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own goals" on public.user_goals;
+create policy "Users can delete own goals"
+  on public.user_goals
   for delete
   using (auth.uid() = user_id);

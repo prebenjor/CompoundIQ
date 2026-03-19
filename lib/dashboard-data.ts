@@ -1,4 +1,5 @@
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+import type { Lang } from '@/lib/i18n'
 
 export type HoldingAccount = 'ASK' | 'Aksjer/fond' | 'BSU'
 
@@ -16,6 +17,7 @@ export interface DashboardSettings {
   monthlyContribution: number
   expectedReturn: number
   inflation: number
+  bsuEnabled: boolean
   bufferAllocationPct: number
   bsuAllocationPct: number
   investmentAllocationPct: number
@@ -43,6 +45,7 @@ interface UserSettingsRow {
   monthly_contribution: number
   expected_return: number
   inflation: number
+  bsu_enabled: boolean
   buffer_allocation_pct: number
   bsu_allocation_pct: number
   investment_allocation_pct: number
@@ -53,10 +56,17 @@ interface UserSettingsRow {
   compact_numbers: boolean
 }
 
+interface ProfileRow {
+  id?: string
+  plan?: 'free' | 'pro' | 'teams' | null
+  language?: Lang | null
+}
+
 export const defaultDashboardSettings: DashboardSettings = {
   monthlyContribution: 3000,
   expectedReturn: 8,
   inflation: 2.5,
+  bsuEnabled: true,
   bufferAllocationPct: 20,
   bsuAllocationPct: 30,
   investmentAllocationPct: 50,
@@ -103,6 +113,7 @@ function mapSettingsRow(row?: Partial<UserSettingsRow> | null): DashboardSetting
       row?.monthly_contribution ?? defaultDashboardSettings.monthlyContribution,
     expectedReturn: row?.expected_return ?? defaultDashboardSettings.expectedReturn,
     inflation: row?.inflation ?? defaultDashboardSettings.inflation,
+    bsuEnabled: row?.bsu_enabled ?? defaultDashboardSettings.bsuEnabled,
     bufferAllocationPct:
       row?.buffer_allocation_pct ?? defaultDashboardSettings.bufferAllocationPct,
     bsuAllocationPct: row?.bsu_allocation_pct ?? defaultDashboardSettings.bsuAllocationPct,
@@ -131,6 +142,7 @@ function buildUserSettingsRow(
     monthly_contribution: settings.monthlyContribution,
     expected_return: settings.expectedReturn,
     inflation: settings.inflation,
+    bsu_enabled: settings.bsuEnabled,
     buffer_allocation_pct: settings.bufferAllocationPct,
     bsu_allocation_pct: settings.bsuAllocationPct,
     investment_allocation_pct: settings.investmentAllocationPct,
@@ -172,17 +184,38 @@ async function getAuthenticatedClient() {
   return { supabase, user }
 }
 
-export async function fetchDashboardSettingsBundle() {
+export async function fetchProfileLanguage() {
   const { supabase, user } = await getAuthenticatedClient()
   const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', user.id)
+    .from('profiles')
+    .select('language')
+    .eq('id', user.id)
     .maybeSingle()
 
   if (error) {
     throw error
   }
+
+  return ((data as ProfileRow | null)?.language ?? 'no') as Lang
+}
+
+export async function fetchDashboardSettingsBundle() {
+  const { supabase, user } = await getAuthenticatedClient()
+  const [settingsResult, profileResult] = await Promise.all([
+    supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
+    supabase.from('profiles').select('language').eq('id', user.id).maybeSingle(),
+  ])
+
+  if (settingsResult.error) {
+    throw settingsResult.error
+  }
+
+  if (profileResult.error) {
+    throw profileResult.error
+  }
+
+  const data = settingsResult.data
+  const language = ((profileResult.data as ProfileRow | null)?.language ?? 'no') as Lang
 
   if (!data) {
     const payload = buildUserSettingsRow(user.id)
@@ -199,12 +232,14 @@ export async function fetchDashboardSettingsBundle() {
     return {
       settings: mapSettingsRow(inserted),
       preferences: mapPreferencesRow(inserted),
+      language,
     }
   }
 
   return {
     settings: mapSettingsRow(data),
     preferences: mapPreferencesRow(data),
+    language,
   }
 }
 
@@ -226,6 +261,7 @@ export async function saveDashboardSettings(settings: DashboardSettings) {
   return {
     settings: mapSettingsRow(data),
     preferences: mapPreferencesRow(data),
+    language: current.language,
   }
 }
 
@@ -247,7 +283,24 @@ export async function saveAccountPreferences(preferences: AccountPreferences) {
   return {
     settings: mapSettingsRow(data),
     preferences: mapPreferencesRow(data),
+    language: current.language,
   }
+}
+
+export async function saveProfileLanguage(language: Lang) {
+  const { supabase, user } = await getAuthenticatedClient()
+  const { error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: user.id,
+      language,
+    })
+
+  if (error) {
+    throw error
+  }
+
+  return language
 }
 
 export async function fetchPortfolioHoldings() {
@@ -426,7 +479,7 @@ export function formatPercent(value: number) {
 export function getBudgetAllocationTotal(settings: DashboardSettings) {
   return (
     settings.bufferAllocationPct +
-    settings.bsuAllocationPct +
+    (settings.bsuEnabled ? settings.bsuAllocationPct : 0) +
     settings.investmentAllocationPct
   )
 }

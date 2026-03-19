@@ -109,13 +109,13 @@ const translations: Record<Lang, Translations> = {
     'plan-free-name': 'Gratis',
     'plan-free-price': '0',
     'plan-free-period': '/mnd',
-    'plan-free-desc': 'Nok verdi til at gratisplanen faktisk blir brukt',
+    'plan-free-desc': 'Én budsjettflate, men sterk nok til faktisk bruk',
     'plan-free-f1': 'Kalkulator for ASK, fond/aksjer og bankkonto',
     'plan-free-f2': 'ASK/BSU-planner og skattejustert modell',
     'plan-free-f3': 'Inflasjon hentet fra SSB',
     'plan-free-f4': 'Realverdi, multiplikator og bærekraftig uttak',
     'plan-free-f5': 'Årsfordeling, graf og scenario-sammenligning',
-    'plan-free-f6': 'Import og eksport av JSON, CSV og enkel Excel-kompatibel CSV',
+    'plan-free-f6': 'Import av CSV/JSON og eksport til CSV, XLSX og PDF for én budsjettflate',
     'plan-free-f7': 'Lagre flere scenarioer lokalt i nettleseren',
     'plan-free-f8': 'Ingen kredittkort nødvendig',
     'plan-free-cta': 'Start gratis',
@@ -128,7 +128,7 @@ const translations: Record<Lang, Translations> = {
     'plan-pro-f2': 'Synk mellom enheter',
     'plan-pro-f3': 'Ubegrensede porteføljer, scenarioer og versjoner',
     'plan-pro-f4': 'Bedre CSV-import, delbare lenker og sterkere eksportflyt',
-    'plan-pro-f5': 'Eksport til PDF, CSV, JSON og delbare lenker',
+    'plan-pro-f5': 'Eksport til PDF, CSV, JSON, XLSX og delbare lenker',
     'plan-pro-f6': 'Målsporing, varsler og månedlige innsikter',
     'plan-pro-f7': 'Husstandsdeling og samarbeid på porteføljer',
     'plan-pro-f8': 'Prioritert tilgang til åpne data-innsikter og analyser',
@@ -270,13 +270,13 @@ const translations: Record<Lang, Translations> = {
     'plan-free-name': 'Free',
     'plan-free-price': '0',
     'plan-free-period': '/mo',
-    'plan-free-desc': 'Useful enough to stand on its own',
+    'plan-free-desc': 'One budget workspace, but useful enough to stand on its own',
     'plan-free-f1': 'ASK, stocks/funds and bank account calculator',
     'plan-free-f2': 'ASK/BSU planner and tax-adjusted modeling',
     'plan-free-f3': 'Inflation fetched from SSB',
     'plan-free-f4': 'Real value, multiplier and withdrawal estimate',
     'plan-free-f5': 'Yearly breakdown, chart and scenario comparison',
-    'plan-free-f6': 'Import and export for JSON, CSV and spreadsheet-friendly CSV',
+    'plan-free-f6': 'CSV/JSON imports and CSV, XLSX and PDF exports for one budget workspace',
     'plan-free-f7': 'Save multiple scenarios locally in the browser',
     'plan-free-f8': 'No credit card required',
     'plan-free-cta': 'Start free',
@@ -289,7 +289,7 @@ const translations: Record<Lang, Translations> = {
     'plan-pro-f2': 'Sync across devices',
     'plan-pro-f3': 'Unlimited portfolios, scenarios and versions',
     'plan-pro-f4': 'Stronger CSV imports, shareable links and a better export flow',
-    'plan-pro-f5': 'Exports for PDF, CSV, JSON and shareable links',
+    'plan-pro-f5': 'Exports for PDF, CSV, JSON, XLSX and shareable links',
     'plan-pro-f6': 'Goal tracking, alerts and monthly insights',
     'plan-pro-f7': 'Household sharing and portfolio collaboration',
     'plan-pro-f8': 'Priority access to open-data insights and analysis features',
@@ -335,12 +335,14 @@ interface LangContextValue {
   lang: Lang
   t: (key: string) => string
   toggleLang: () => void
+  setLang: (lang: Lang) => void
 }
 
 const LangContext = createContext<LangContextValue>({
   lang: 'no',
   t: (key) => key,
   toggleLang: () => {},
+  setLang: () => {},
 })
 
 export function LangProvider({ children }: { children: ReactNode }) {
@@ -358,16 +360,20 @@ export function LangProvider({ children }: { children: ReactNode }) {
     document.title = translations[lang]['page-title']
   }, [lang])
 
-  const toggleLang = () => {
-    const next: Lang = lang === 'no' ? 'en' : 'no'
+  const setPreferredLang = (next: Lang) => {
     setLang(next)
     localStorage.setItem('ciq-lang', next)
+  }
+
+  const toggleLang = () => {
+    const next: Lang = lang === 'no' ? 'en' : 'no'
+    setPreferredLang(next)
   }
 
   const t = (key: string) => translations[lang][key] ?? key
 
   return (
-    <LangContext.Provider value={{ lang, t, toggleLang }}>
+    <LangContext.Provider value={{ lang, t, toggleLang, setLang: setPreferredLang }}>
       {children}
     </LangContext.Provider>
   )

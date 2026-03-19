@@ -8,6 +8,12 @@ import {
   type BudgetSavingsThread,
 } from '@/lib/budget-data'
 import {
+  deriveGoalSummaries,
+  fetchUserGoals,
+  type GoalSummary,
+  type UserGoal,
+} from '@/lib/goals-data'
+import {
   calculatePortfolioSummary,
   defaultDashboardSettings,
   fetchDashboardSettingsBundle,
@@ -47,6 +53,7 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
   const [settings, setSettings] = useState<DashboardSettings>(defaultDashboardSettings)
   const [budgetThread, setBudgetThread] = useState<BudgetSavingsThread | null>(null)
+  const [goals, setGoals] = useState<UserGoal[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -58,10 +65,11 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
       setError(null)
 
       try {
-        const [portfolio, bundle, budget] = await Promise.all([
+        const [portfolio, bundle, budget, userGoals] = await Promise.all([
           fetchPortfolioHoldings(),
           fetchDashboardSettingsBundle(),
           fetchBudgetSavingsThread().catch(() => null),
+          fetchUserGoals().catch(() => []),
         ])
 
         if (!active) {
@@ -71,6 +79,7 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
         setHoldings(portfolio)
         setSettings(bundle.settings)
         setBudgetThread(budget)
+        setGoals(userGoals)
       } catch (loadError) {
         if (!active) {
           return
@@ -95,6 +104,7 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
 
   const summary = calculatePortfolioSummary(holdings, settings)
   const hasHoldings = holdings.length > 0
+  const bsuEnabled = settings.bsuEnabled
   const displayGain =
     summary.totalCost > 0
       ? `${formatCurrency(summary.totalGain)} (${formatPercent(summary.totalGainPct)})`
@@ -102,9 +112,10 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
         ? 'Laster...'
         : 'Ingen data enda'
 
+  const goalSummaries = useMemo(() => deriveGoalSummaries(goals, budgetThread), [goals, budgetThread])
   const controlRoom = useMemo(
-    () => buildControlRoom(budgetThread, settings, hasHoldings),
-    [budgetThread, settings, hasHoldings]
+    () => buildControlRoom(budgetThread, settings, hasHoldings, goalSummaries),
+    [budgetThread, settings, hasHoldings, goalSummaries]
   )
 
   return (
@@ -114,14 +125,14 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
           <div className="dash-header-row">
             <h1 className="dash-title">Hei, {displayName}</h1>
           </div>
-          <p className="dash-subtitle">Her er den manedlige kontrollflaten din akkurat naa.</p>
+          <p className="dash-subtitle">Her er den månedlige kontrollflaten din akkurat nå.</p>
         </div>
         <div className="dash-actions">
           <Link href="/dashboard/budget" className="btn btn-outline">
-            Apne budsjett
+            Åpne budsjett
           </Link>
           <Link href="/dashboard/portfolio" className="btn btn-primary">
-            + Legg til portefolje
+            + Legg til portefølje
           </Link>
         </div>
       </div>
@@ -130,9 +141,9 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
 
       <div className="dash-stats">
         <StatCard
-          label="Total portefoljeverdi"
+          label="Total porteføljeverdi"
           value={hasHoldings ? formatCurrency(summary.totalValue) : loading ? 'Laster...' : 'Ingen data'}
-          hint="Bygges fra manuelle posisjoner lagret paa kontoen din."
+          hint="Bygges fra manuelle posisjoner lagret på kontoen din."
         />
         <StatCard
           label="Total avkastning"
@@ -140,22 +151,22 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
           hint="Sammenligner kostpris mot estimert markedsverdi."
         />
         <StatCard
-          label="Estimert verdi om 10 aar"
+          label="Estimert verdi om 10 år"
           value={
             hasHoldings ? formatCurrency(summary.projectedValue10y) : loading ? 'Laster...' : 'Ingen data'
           }
-          hint={`Basert paa ${settings.expectedReturn.toFixed(1).replace('.', ',')} % forventet avkastning og ${formatCurrency(settings.monthlyContribution)} i manedlig sparing.`}
+          hint={`Basert på ${settings.expectedReturn.toFixed(1).replace('.', ',')} % forventet avkastning og ${formatCurrency(settings.monthlyContribution)} i månedlig sparing.`}
         />
         <StatCard
           label="ASK-andel"
           value={hasHoldings ? formatPercent(summary.askShare) : loading ? 'Laster...' : 'Ingen data'}
-          hint="Andel av dagens portefoljeverdi som ligger paa ASK."
+          hint="Andel av dagens porteføljeverdi som ligger på ASK."
         />
       </div>
 
       <div className="dash-section">
         <div className="dash-header-row dashboard-section-header">
-          <h2 className="dash-section-title">Manedlig kontrollrom</h2>
+          <h2 className="dash-section-title">Månedlig kontrollrom</h2>
           <span className={`control-room-pill control-room-pill-${controlRoom.pillTone}`}>
             {controlRoom.pillLabel}
           </span>
@@ -204,7 +215,7 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
         ) : (
           <div className="dashboard-panel">
             <p className="panel-copy">
-              Sett opp budsjettet ditt for aa faa et ekte kontrollrom med overskudd, fordeling og
+              Sett opp budsjettet ditt for å få et ekte kontrollrom med overskudd, fordeling og
               anbefalte neste trekk.
             </p>
             <div className="dash-actions">
@@ -212,12 +223,28 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
                 Sett opp budsjett
               </Link>
               <Link href="/dashboard/calculator" className="btn btn-outline">
-                Apne kalkulator
+                Åpne kalkulator
               </Link>
             </div>
           </div>
         )}
       </div>
+
+      {goalSummaries.length > 0 ? (
+        <div className="dash-section">
+          <div className="dash-header-row dashboard-section-header">
+            <h2 className="dash-section-title">Mål i fokus</h2>
+            <Link href="/dashboard/goals" className="btn btn-ghost btn-sm">
+              Åpne mål
+            </Link>
+          </div>
+          <div className="dash-stats dash-stats-two">
+            {goalSummaries.map((summary) => (
+              <GoalCard key={summary.goal.id} summary={summary} />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="dash-section">
         <h2 className="dash-section-title">Kom i gang</h2>
@@ -225,30 +252,45 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
           <QuickCard
             icon="Cash"
             title="Budsjett"
-            desc="Finn realistisk overskudd hver maned og send det videre til sparing og investering."
+            desc="Finn realistisk overskudd hver måned og send det videre til sparing og investering."
             href="/dashboard/budget"
-            cta="Apne budsjett"
+            cta="Åpne budsjett"
           />
           <QuickCard
             icon="Chart"
             title="Kalkulator"
             desc="Bruk renters rente-kalkulatoren med sparing hentet fra budsjettet."
             href="/dashboard/calculator"
-            cta="Apne kalkulator"
+            cta="Åpne kalkulator"
+          />
+          <QuickCard
+            icon="Goal"
+            title="Mål"
+            desc={
+              bsuEnabled
+                ? 'Følg nødbuffer og BSU mot realistiske datoer basert på månedlig overskudd.'
+                : 'Følg nødbuffer og andre mål mot realistiske datoer basert på månedlig overskudd.'
+            }
+            href="/dashboard/goals"
+            cta="Se mål"
           />
           <QuickCard
             icon="Port"
-            title="Portefolje"
-            desc="Legg inn beholdninger, kostpris og naakurs. Oversikten oppdateres automatisk."
+            title="Portefølje"
+            desc="Legg inn beholdninger, kostpris og dagens verdi manuelt for å følge utviklingen."
             href="/dashboard/portfolio"
-            cta="Se portefolje"
+            cta="Se portefølje"
           />
           <QuickCard
             icon="ASK"
-            title="ASK og BSU"
-            desc="Bruk budsjettoverkuddet ditt til aa planlegge BSU, buffer og investering side om side."
+            title={bsuEnabled ? 'ASK og BSU' : 'ASK'}
+            desc={
+              bsuEnabled
+                ? 'Bruk budsjettoverskuddet ditt til å planlegge BSU, buffer og investering side om side.'
+                : 'Bruk budsjettoverskuddet ditt til å planlegge ASK, buffer og investering side om side.'
+            }
             href="/dashboard/ask-bsu"
-            cta="Apne planner"
+            cta={bsuEnabled ? 'Åpne planlegger' : 'Åpne ASK-planner'}
           />
         </div>
       </div>
@@ -259,19 +301,20 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
 function buildControlRoom(
   budgetThread: BudgetSavingsThread | null,
   settings: DashboardSettings,
-  hasHoldings: boolean
+  hasHoldings: boolean,
+  goalSummaries: GoalSummary[]
 ) {
   if (!budgetThread) {
     return {
       pillTone: 'neutral' as const,
-      pillLabel: 'Venter paa budsjett',
+      pillLabel: 'Venter på budsjett',
       metrics: [] as ControlRoomMetric[],
       policyCards: [] as ControlRoomPolicyCard[],
       actions: [
         {
-          title: 'Sett opp manedsbudsjettet',
+          title: 'Sett opp månedsbudsjettet',
           description:
-            'Start med inntekter, utgifter og sparekategorier. Derfra kan dashboardet foreslaa hva du faktisk kan investere.',
+            'Start med inntekter, utgifter og sparekategorier. Derfra kan dashboardet foreslå hva du faktisk kan investere.',
           href: '/dashboard/budget',
           cta: 'Sett opp budsjett',
           tone: 'neutral' as const,
@@ -290,7 +333,7 @@ function buildControlRoom(
     {
       label: 'Kan settes av',
       value: formatBudgetCurrency(budgetThread.availableToSave),
-      hint: 'Planlagt inntekt minus planlagte utgifter denne maneden.',
+      hint: 'Planlagt inntekt minus planlagte utgifter denne måneden.',
     },
     {
       label: 'Til investering',
@@ -298,11 +341,15 @@ function buildControlRoom(
       hint: `${budgetThread.investmentAllocationPct.toFixed(0)} % av overskuddet sendes til investering.`,
     },
     {
-      label: 'Til buffer og BSU',
-      value: formatBudgetCurrency(budgetThread.availableToBuffer + budgetThread.availableToBsu),
-      hint: `${(
-        budgetThread.bufferAllocationPct + budgetThread.bsuAllocationPct
-      ).toFixed(0)} % holdes igjen for kortsiktige mal.`,
+      label: budgetThread.bsuEnabled ? 'Til buffer og BSU' : 'Til buffer',
+      value: formatBudgetCurrency(
+        budgetThread.availableToBuffer + (budgetThread.bsuEnabled ? budgetThread.availableToBsu : 0)
+      ),
+      hint: budgetThread.bsuEnabled
+        ? `${(
+            budgetThread.bufferAllocationPct + budgetThread.bsuAllocationPct
+          ).toFixed(0)} % holdes igjen for kortsiktige mål.`
+        : `${budgetThread.bufferAllocationPct.toFixed(0)} % holdes igjen til buffer og trygg reserve.`,
     },
     {
       label: 'Fritt handlingsrom',
@@ -316,78 +363,96 @@ function buildControlRoom(
 
   const policyCards: ControlRoomPolicyCard[] = [
     {
-      label: 'Investerbart per aar',
+      label: 'Investerbart per år',
       value: formatBudgetCurrency(annualInvest),
-      hint: 'Dersom du holder samme manedlige takt i 12 maneder.',
+      hint: 'Dersom du holder samme månedlige takt i 12 måneder.',
     },
+    ...(budgetThread.bsuEnabled
+      ? [
+          {
+            label: 'BSU-fart per år',
+            value: formatBudgetCurrency(annualBsu),
+            hint:
+              annualBsu >= 27500
+                ? 'Du ligger an til å fylle hele BSU-rammen.'
+                : 'Dette er hva dagens fordeling gir mot BSU i år.',
+          },
+        ]
+      : []),
     {
-      label: 'BSU-fart per aar',
-      value: formatBudgetCurrency(annualBsu),
-      hint:
-        annualBsu >= 27500
-          ? 'Du ligger an til aa fylle hele BSU-rammen.'
-          : 'Dette er hva dagens fordeling gir mot BSU i ar.',
-    },
-    {
-      label: 'Bufferbygging per aar',
+      label: 'Bufferbygging per år',
       value: formatBudgetCurrency(annualBuffer),
-      hint: 'Brukes til aa bygge reserve og redusere press i svakere maneder.',
+      hint: 'Brukes til å bygge reserve og redusere press i svakere måneder.',
     },
     {
-      label: 'Avvik mot sparemal',
+      label: 'Avvik mot sparemål',
       value:
         investGap >= 0
           ? `+ ${formatBudgetCurrency(investGap)}`
           : `- ${formatBudgetCurrency(Math.abs(investGap))}`,
       hint:
         investGap >= 0
-          ? 'Budsjettet stotter et investeringsniva over standardmalet ditt.'
-          : 'Standardmalet ditt er hoyere enn det budsjettet stotter akkurat naa.',
+          ? 'Budsjettet støtter et investeringsnivå over standardmålet ditt.'
+          : 'Standardmålet ditt er høyere enn det budsjettet støtter akkurat nå.',
     },
-  ]
+  ].slice(0, 4)
 
   const actions: ControlRoomAction[] = []
 
   if (budgetThread.availableToSave <= 0) {
     actions.push({
-      title: 'Skap overskudd forst',
+      title: 'Skap overskudd først',
       description:
-        'Planen din viser ikke positivt sparegrunnlag denne maneden. Gaa gjennom utgiftene og finn rom for et lite nettooverskudd.',
+        'Planen din viser ikke positivt sparegrunnlag denne måneden. Gå gjennom utgiftene og finn rom for et lite nettooverskudd.',
       href: '/dashboard/budget',
       cta: 'Juster budsjett',
       tone: 'warning',
     })
   }
 
-  if (budgetThread.availableToBsu > 0) {
+  if (budgetThread.bsuEnabled && budgetThread.availableToBsu > 0) {
     actions.push({
       title: 'Bruk BSU-kapasiteten',
       description: `Dagens policy sender ${formatBudgetCurrency(
         budgetThread.availableToBsu
-      )} per maned mot BSU. Hold tempoet hvis du vil fylle arskvoten raskere.`,
+      )} per måned mot BSU. Hold tempoet hvis du vil fylle årskvoten raskere.`,
       href: '/dashboard/ask-bsu',
       cta: 'Se ASK og BSU',
       tone: 'positive',
     })
   }
 
+  const behindGoal = goalSummaries.find(
+    (summary) => summary.goal.status === 'active' && !summary.isOnTrack && summary.remainingAmount > 0
+  )
+
+  if (behindGoal) {
+    actions.push({
+      title: `Løft ${behindGoal.goal.title}`,
+      description: behindGoal.guidance,
+      href: '/dashboard/goals',
+      cta: 'Juster mål',
+      tone: 'warning',
+    })
+  }
+
   if (!hasHoldings && budgetThread.availableToInvest > 0) {
     actions.push({
-      title: 'Bygg din forste portefolje',
+      title: 'Bygg din første portefølje',
       description: `Du har ${formatBudgetCurrency(
         budgetThread.availableToInvest
-      )} klar til investering hver maned, men ingen posisjoner registrert enda.`,
+      )} klar til investering hver måned, men ingen posisjoner registrert enda.`,
       href: '/dashboard/portfolio',
-      cta: 'Legg til portefolje',
+      cta: 'Legg til portefølje',
       tone: 'positive',
     })
   }
 
   if (hasHoldings && investGap < 0) {
     actions.push({
-      title: 'Juster sparemalet til virkeligheten',
+      title: 'Juster sparemålet til virkeligheten',
       description:
-        'Investeringsmalet ditt ligger over det budsjettet stotter. Senk standardmalet eller skap mer overskudd for aa unngaa friksjon.',
+        'Investeringsmålet ditt ligger over det budsjettet støtter. Senk standardmålet eller skap mer overskudd for å unngå friksjon.',
       href: '/dashboard/settings',
       cta: 'Oppdater innstillinger',
       tone: 'warning',
@@ -396,10 +461,10 @@ function buildControlRoom(
 
   if (hasHoldings && budgetThread.availableToInvest > 0 && investGap >= 0) {
     actions.push({
-      title: 'Ok manedlig investeringsflyt',
-      description: `Budsjettet ditt stotter ${formatBudgetCurrency(
+      title: 'Ok månedlig investeringsflyt',
+      description: `Budsjettet ditt støtter ${formatBudgetCurrency(
         budgetThread.availableToInvest
-      )} per maned til investering. Send dette videre til kalkulatoren og ASK-planen.`,
+      )} per måned til investering. Send dette videre til kalkulatoren og ASK-planen.`,
       href: '/dashboard/calculator',
       cta: 'Bruk i kalkulator',
       tone: 'positive',
@@ -409,9 +474,13 @@ function buildControlRoom(
   if (freeSlack > 0) {
     actions.push({
       title: 'Gi det frie overskuddet en jobb',
-      description: `Du har ${formatBudgetCurrency(
-        freeSlack
-      )} som ikke er fordelt enda. Vurder om det skal til buffer, BSU eller investering.`,
+      description: budgetThread.bsuEnabled
+        ? `Du har ${formatBudgetCurrency(
+            freeSlack
+          )} som ikke er fordelt enda. Vurder om det skal til buffer, BSU eller investering.`
+        : `Du har ${formatBudgetCurrency(
+            freeSlack
+          )} som ikke er fordelt enda. Vurder om det skal til buffer eller investering.`,
       href: '/dashboard/settings',
       cta: 'Juster fordeling',
       tone: 'neutral',
@@ -420,7 +489,7 @@ function buildControlRoom(
 
   while (actions.length < 3) {
     actions.push({
-      title: 'Hold kontroll hver maned',
+      title: 'Hold kontroll hver måned',
       description:
         'Oppdater budsjettet og bruk kontrollrommet som fast sjekkpunkt for hva du realistisk kan spare og investere.',
       href: '/dashboard/budget',
@@ -434,7 +503,7 @@ function buildControlRoom(
 
   if (budgetThread.availableToSave > 0 && investGap >= 0) {
     pillTone = 'positive'
-    pillLabel = 'Paa sporet'
+    pillLabel = 'På sporet'
   } else if (budgetThread.availableToSave <= 0 || investGap < 0) {
     pillTone = 'warning'
     pillLabel = 'Krever justering'
@@ -447,6 +516,19 @@ function buildControlRoom(
     policyCards,
     actions: actions.slice(0, 3),
   }
+}
+
+function GoalCard({ summary }: { summary: GoalSummary }) {
+  return (
+    <div className={`stat-card goal-progress-card goal-progress-card-${summary.tone}`}>
+      <span className="stat-label">{summary.goal.title}</span>
+      <span className="stat-value stat-value-lg">{Math.round(summary.progressPct)} %</span>
+      <span className="stat-hint">
+        {formatBudgetCurrency(summary.goal.currentAmount)} av {formatBudgetCurrency(summary.goal.targetAmount)}
+      </span>
+      <span className="stat-hint">{summary.guidance}</span>
+    </div>
+  )
 }
 
 function StatCard({
