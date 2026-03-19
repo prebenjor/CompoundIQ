@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLang } from '@/lib/i18n'
 
 type AccountType = 'ask' | 'vanlig' | 'bank'
+type CalculatorVariant = 'landing' | 'dashboard'
 
 const TAX_CAPITAL = 0.3784
 const TAX_BANK = 0.22
@@ -268,9 +269,14 @@ function drawChart(
   }
 }
 
-export default function Calculator() {
+export default function Calculator({
+  variant = 'landing',
+}: {
+  variant?: CalculatorVariant
+}) {
   const { t } = useLang()
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const isDashboard = variant === 'dashboard'
 
   const [principal, setPrincipal] = useState(100000)
   const [monthly, setMonthly] = useState(3000)
@@ -367,16 +373,29 @@ export default function Calculator() {
     : []
 
   return (
-    <section className="calculator-section section" id="calculator">
-      <div className="container">
-        <div className="section-header">
-          <p className="section-tag">{t('calc-tag')}</p>
-          <h2 className="section-title">{t('calc-title')}</h2>
-          <p className="section-subtitle">{t('calc-subtitle')}</p>
-        </div>
+    <section
+      className={`calculator-section ${isDashboard ? 'calculator-section-dashboard' : 'calculator-section-landing section'}`}
+      id={isDashboard ? undefined : 'calculator'}
+    >
+      <div
+        className={
+          isDashboard
+            ? 'calculator-shell calculator-shell-dashboard'
+            : 'container calculator-shell calculator-shell-landing'
+        }
+      >
+        {!isDashboard ? (
+          <div className="section-header">
+            <p className="section-tag">{t('calc-tag')}</p>
+            <h2 className="section-title">{t('calc-title')}</h2>
+            <p className="section-subtitle">{t('calc-subtitle')}</p>
+          </div>
+        ) : null}
 
-        <div className="calculator-card">
-          <div className="calc-inputs">
+        <div
+          className={`calculator-card${isDashboard ? ' calculator-card-dashboard' : ' calculator-card-landing'}`}
+        >
+          <div className={`calc-inputs${isDashboard ? ' calc-inputs-dashboard' : ' calc-inputs-landing'}`}>
             <div className="input-group input-group-full">
               <label>{t('calc-account-label')}</label>
               <div className="account-selector">
@@ -405,50 +424,66 @@ export default function Calculator() {
               suffix="kr"
               onChange={setPrincipal}
             />
-            <InputField
-              id="monthly"
-              label={t('calc-monthly-label')}
-              value={monthly}
-              suffix="kr"
-              onChange={setMonthly}
-            />
-            <input
-              type="range"
-              className="calc-slider"
-              min={0}
-              max={25000}
-              step={500}
-              value={monthly}
-              onChange={(event) => setMonthly(Number(event.target.value))}
-            />
 
-            <InputField
-              id="rate"
-              label={t('calc-rate-label')}
-              value={rate}
-              suffix="%"
-              step={0.1}
-              onChange={setRate}
-            />
-            <input
-              type="range"
-              className="calc-slider"
-              min={0}
-              max={20}
-              step={0.5}
-              value={rate}
-              onChange={(event) => setRate(Number(event.target.value))}
-            />
+            <div className="input-stack">
+              <InputField
+                id="monthly"
+                label={t('calc-monthly-label')}
+                value={monthly}
+                suffix="kr"
+                onChange={setMonthly}
+              />
+              <input
+                type="range"
+                className="calc-slider"
+                min={0}
+                max={25000}
+                step={500}
+                value={monthly}
+                onChange={(event) => setMonthly(Number(event.target.value))}
+              />
+            </div>
 
-            <InputField
-              id="years"
-              label={t('calc-years-label')}
-              value={years}
-              suffix={t('years-suffix')}
-              min={1}
-              max={50}
-              onChange={(value) => setYears(Math.min(50, Math.max(1, value)))}
-            />
+            <div className="input-stack">
+              <InputField
+                id="rate"
+                label={t('calc-rate-label')}
+                value={rate}
+                suffix="%"
+                step={0.1}
+                onChange={setRate}
+              />
+              <input
+                type="range"
+                className="calc-slider"
+                min={0}
+                max={20}
+                step={0.5}
+                value={rate}
+                onChange={(event) => setRate(Number(event.target.value))}
+              />
+            </div>
+
+            <div className="input-stack">
+              <InputField
+                id="years"
+                label={t('calc-years-label')}
+                value={years}
+                suffix={t('years-suffix')}
+                min={1}
+                max={50}
+                onChange={(value) => setYears(Math.min(50, Math.max(1, value)))}
+              />
+              <input
+                type="range"
+                className="calc-slider"
+                min={1}
+                max={50}
+                step={1}
+                value={years}
+                onChange={(event) => setYears(Number(event.target.value))}
+              />
+            </div>
 
             <div className="input-group">
               <label htmlFor="inflation">
@@ -488,7 +523,9 @@ export default function Calculator() {
             />
           </div>
 
-          <div className="calc-results">
+          <div
+            className={`calc-results${isDashboard ? ' calc-results-dashboard' : ' calc-results-landing'}`}
+          >
             <div className="result-hero">
               <div className="result-hero-left">
                 <span className="result-label">
