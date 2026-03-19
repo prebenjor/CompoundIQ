@@ -1,45 +1,78 @@
 'use client'
 
 import Link from 'next/link'
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState } from 'react'
 import {
   calculatePortfolioSummary,
   defaultDashboardSettings,
+  fetchDashboardSettingsBundle,
+  fetchPortfolioHoldings,
   formatCurrency,
   formatPercent,
-  loadDashboardSettings,
-  loadPortfolioHoldings,
-  sampleHoldings,
-  subscribeDashboardStorage,
+  getDataErrorMessage,
   type DashboardSettings,
+  type PortfolioHolding,
 } from '@/lib/dashboard-data'
 
 interface DashboardOverviewProps {
   displayName: string
-  isDemoMode: boolean
 }
 
-export default function DashboardOverview({
-  displayName,
-  isDemoMode,
-}: DashboardOverviewProps) {
-  const holdings = useSyncExternalStore(
-    subscribeDashboardStorage,
-    loadPortfolioHoldings,
-    () => sampleHoldings
-  )
-  const settings = useSyncExternalStore<DashboardSettings>(
-    subscribeDashboardStorage,
-    loadDashboardSettings,
-    () => defaultDashboardSettings
-  )
+export default function DashboardOverview({ displayName }: DashboardOverviewProps) {
+  const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
+  const [settings, setSettings] = useState<DashboardSettings>(defaultDashboardSettings)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadData() {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const [portfolio, bundle] = await Promise.all([
+          fetchPortfolioHoldings(),
+          fetchDashboardSettingsBundle(),
+        ])
+
+        if (!active) {
+          return
+        }
+
+        setHoldings(portfolio)
+        setSettings(bundle.settings)
+      } catch (loadError) {
+        if (!active) {
+          return
+        }
+
+        const message =
+          loadError instanceof Error ? getDataErrorMessage(loadError.message) : getDataErrorMessage()
+        setError(message)
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadData()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const summary = calculatePortfolioSummary(holdings, settings)
   const hasHoldings = holdings.length > 0
   const displayGain =
     summary.totalCost > 0
       ? `${formatCurrency(summary.totalGain)} (${formatPercent(summary.totalGainPct)})`
-      : 'Ingen data ennå'
+      : loading
+        ? 'Laster...'
+        : 'Ingen data ennå'
 
   return (
     <div className="dash-page">
@@ -47,24 +80,21 @@ export default function DashboardOverview({
         <div>
           <div className="dash-header-row">
             <h1 className="dash-title">Hei, {displayName}</h1>
-            {isDemoMode ? <span className="dash-mode-badge">Demo mode</span> : null}
           </div>
-          <p className="dash-subtitle">
-            {isDemoMode
-              ? 'Prøv dashboardet lokalt. Legg inn demoporteføljen din eller koble på Supabase senere.'
-              : 'Her er oversikten din akkurat nå.'}
-          </p>
+          <p className="dash-subtitle">Her er oversikten din akkurat nå.</p>
         </div>
         <Link href="/dashboard/portfolio" className="btn btn-primary">
           + Legg til portefølje
         </Link>
       </div>
 
+      {error ? <div className="auth-error">{error}</div> : null}
+
       <div className="dash-stats">
         <StatCard
           label="Total porteføljeverdi"
-          value={hasHoldings ? formatCurrency(summary.totalValue) : 'Ingen data'}
-          hint="Bygges fra manuelle posisjoner i porteføljen din."
+          value={hasHoldings ? formatCurrency(summary.totalValue) : loading ? 'Laster...' : 'Ingen data'}
+          hint="Bygges fra manuelle posisjoner lagret på kontoen din."
         />
         <StatCard
           label="Total avkastning"
@@ -73,12 +103,14 @@ export default function DashboardOverview({
         />
         <StatCard
           label="Estimert verdi om 10 år"
-          value={hasHoldings ? formatCurrency(summary.projectedValue10y) : 'Ingen data'}
+          value={
+            hasHoldings ? formatCurrency(summary.projectedValue10y) : loading ? 'Laster...' : 'Ingen data'
+          }
           hint={`Basert på ${settings.expectedReturn.toFixed(1).replace('.', ',')} % forventet avkastning og ${formatCurrency(settings.monthlyContribution)} i månedlig sparing.`}
         />
         <StatCard
           label="ASK-andel"
-          value={hasHoldings ? formatPercent(summary.askShare) : 'Ingen data'}
+          value={hasHoldings ? formatPercent(summary.askShare) : loading ? 'Laster...' : 'Ingen data'}
           hint="Andel av dagens porteføljeverdi som ligger på ASK."
         />
       </div>
@@ -89,7 +121,7 @@ export default function DashboardOverview({
           <QuickCard
             icon="Chart"
             title="Kalkulator"
-            desc="Bruk den eksisterende renters rente-kalkulatoren fra dashboardet."
+            desc="Bruk renters rente-kalkulatoren direkte fra dashboardet."
             href="/dashboard/calculator"
             cta="Åpne kalkulator"
           />
@@ -110,7 +142,7 @@ export default function DashboardOverview({
           <QuickCard
             icon="Sync"
             title="Integrasjoner"
-            desc="Se hva som kommer for Nordnet-import og andre koblinger, og meld interesse."
+            desc="Se hva som kommer for broker-import og andre koblinger, og meld interesse."
             href="/dashboard/integrations"
             cta="Se integrasjoner"
             badge="Preview"

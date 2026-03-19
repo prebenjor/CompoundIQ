@@ -1,3 +1,5 @@
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+
 export type HoldingAccount = 'ASK' | 'Aksjer/fond' | 'BSU'
 
 export interface PortfolioHolding {
@@ -16,6 +18,14 @@ export interface DashboardSettings {
   inflation: number
 }
 
+export interface AccountPreferences {
+  weeklyDigest: boolean
+  taxReminders: boolean
+  productUpdates: boolean
+  securityAlerts: boolean
+  compactNumbers: boolean
+}
+
 export interface PortfolioSummary {
   totalCost: number
   totalValue: number
@@ -25,9 +35,17 @@ export interface PortfolioSummary {
   askShare: number
 }
 
-export const PORTFOLIO_STORAGE_KEY = 'ciq-portfolio'
-export const SETTINGS_STORAGE_KEY = 'ciq-dashboard-settings'
-const DASHBOARD_STORAGE_EVENT = 'ciq-dashboard-storage'
+interface UserSettingsRow {
+  user_id: string
+  monthly_contribution: number
+  expected_return: number
+  inflation: number
+  weekly_digest: boolean
+  tax_reminders: boolean
+  product_updates: boolean
+  security_alerts: boolean
+  compact_numbers: boolean
+}
 
 export const defaultDashboardSettings: DashboardSettings = {
   monthlyContribution: 3000,
@@ -35,9 +53,16 @@ export const defaultDashboardSettings: DashboardSettings = {
   inflation: 2.5,
 }
 
-export const sampleHoldings: PortfolioHolding[] = [
+export const defaultAccountPreferences: AccountPreferences = {
+  weeklyDigest: true,
+  taxReminders: true,
+  productUpdates: false,
+  securityAlerts: true,
+  compactNumbers: false,
+}
+
+export const sampleHoldings: Omit<PortfolioHolding, 'id'>[] = [
   {
-    id: 'sample-dnb-global',
     name: 'DNB Global Indeks',
     ticker: 'DNBGI',
     shares: 112.4,
@@ -46,7 +71,6 @@ export const sampleHoldings: PortfolioHolding[] = [
     accountType: 'ASK',
   },
   {
-    id: 'sample-storebrand',
     name: 'Storebrand Norge',
     ticker: 'STBNO',
     shares: 48,
@@ -55,7 +79,6 @@ export const sampleHoldings: PortfolioHolding[] = [
     accountType: 'Aksjer/fond',
   },
   {
-    id: 'sample-bsu',
     name: 'BSU-konto',
     ticker: 'BSU',
     shares: 1,
@@ -65,110 +88,252 @@ export const sampleHoldings: PortfolioHolding[] = [
   },
 ]
 
-let cachedPortfolioRaw: string | null | undefined
-let cachedPortfolioSnapshot: PortfolioHolding[] = sampleHoldings
-let cachedSettingsRaw: string | null | undefined
-let cachedSettingsSnapshot: DashboardSettings = defaultDashboardSettings
-
-function parseJson<T>(value: string | null, fallback: T): T {
-  if (!value) {
-    return fallback
-  }
-
-  try {
-    return JSON.parse(value) as T
-  } catch {
-    return fallback
+function mapSettingsRow(row?: Partial<UserSettingsRow> | null): DashboardSettings {
+  return {
+    monthlyContribution:
+      row?.monthly_contribution ?? defaultDashboardSettings.monthlyContribution,
+    expectedReturn: row?.expected_return ?? defaultDashboardSettings.expectedReturn,
+    inflation: row?.inflation ?? defaultDashboardSettings.inflation,
   }
 }
 
-function hasWindow() {
-  return typeof window !== 'undefined'
+function mapPreferencesRow(row?: Partial<UserSettingsRow> | null): AccountPreferences {
+  return {
+    weeklyDigest: row?.weekly_digest ?? defaultAccountPreferences.weeklyDigest,
+    taxReminders: row?.tax_reminders ?? defaultAccountPreferences.taxReminders,
+    productUpdates: row?.product_updates ?? defaultAccountPreferences.productUpdates,
+    securityAlerts: row?.security_alerts ?? defaultAccountPreferences.securityAlerts,
+    compactNumbers: row?.compact_numbers ?? defaultAccountPreferences.compactNumbers,
+  }
 }
 
-function emitStorageChange() {
-  if (!hasWindow()) {
-    return
+function buildUserSettingsRow(
+  userId: string,
+  settings: DashboardSettings = defaultDashboardSettings,
+  preferences: AccountPreferences = defaultAccountPreferences
+): UserSettingsRow {
+  return {
+    user_id: userId,
+    monthly_contribution: settings.monthlyContribution,
+    expected_return: settings.expectedReturn,
+    inflation: settings.inflation,
+    weekly_digest: preferences.weeklyDigest,
+    tax_reminders: preferences.taxReminders,
+    product_updates: preferences.productUpdates,
+    security_alerts: preferences.securityAlerts,
+    compact_numbers: preferences.compactNumbers,
   }
-
-  window.dispatchEvent(new Event(DASHBOARD_STORAGE_EVENT))
 }
 
-export function loadPortfolioHoldings() {
-  if (!hasWindow()) {
-    return sampleHoldings
+function mapHoldingRow(row: Record<string, unknown>): PortfolioHolding {
+  return {
+    id: String(row.id),
+    name: String(row.name ?? ''),
+    ticker: String(row.ticker ?? ''),
+    shares: Number(row.shares ?? 0),
+    averagePrice: Number(row.average_price ?? 0),
+    currentPrice: Number(row.current_price ?? 0),
+    accountType: row.account_type as HoldingAccount,
   }
-
-  const raw = window.localStorage.getItem(PORTFOLIO_STORAGE_KEY)
-
-  if (raw === cachedPortfolioRaw) {
-    return cachedPortfolioSnapshot
-  }
-
-  const parsed = parseJson<PortfolioHolding[]>(raw, sampleHoldings)
-  cachedPortfolioRaw = raw
-  cachedPortfolioSnapshot = parsed.filter((holding) => Boolean(holding.id && holding.name))
-
-  return cachedPortfolioSnapshot
 }
 
-export function savePortfolioHoldings(holdings: PortfolioHolding[]) {
-  if (!hasWindow()) {
-    return
+async function getAuthenticatedClient() {
+  const supabase = createBrowserSupabaseClient()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error) {
+    throw error
   }
 
-  const serialized = JSON.stringify(holdings)
-  window.localStorage.setItem(PORTFOLIO_STORAGE_KEY, serialized)
-  cachedPortfolioRaw = serialized
-  cachedPortfolioSnapshot = holdings
-  emitStorageChange()
+  if (!user) {
+    throw new Error('Du må være logget inn for å hente data.')
+  }
+
+  return { supabase, user }
 }
 
-export function loadDashboardSettings() {
-  if (!hasWindow()) {
-    return defaultDashboardSettings
+export async function fetchDashboardSettingsBundle() {
+  const { supabase, user } = await getAuthenticatedClient()
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (error) {
+    throw error
   }
 
-  const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+  if (!data) {
+    const payload = buildUserSettingsRow(user.id)
+    const { data: inserted, error: insertError } = await supabase
+      .from('user_settings')
+      .upsert(payload)
+      .select('*')
+      .single()
 
-  if (raw === cachedSettingsRaw) {
-    return cachedSettingsSnapshot
+    if (insertError) {
+      throw insertError
+    }
+
+    return {
+      settings: mapSettingsRow(inserted),
+      preferences: mapPreferencesRow(inserted),
+    }
   }
 
-  cachedSettingsRaw = raw
-  cachedSettingsSnapshot = {
-    ...defaultDashboardSettings,
-    ...parseJson<Partial<DashboardSettings>>(raw, defaultDashboardSettings),
+  return {
+    settings: mapSettingsRow(data),
+    preferences: mapPreferencesRow(data),
   }
-
-  return cachedSettingsSnapshot
 }
 
-export function saveDashboardSettings(settings: DashboardSettings) {
-  if (!hasWindow()) {
-    return
+export async function saveDashboardSettings(settings: DashboardSettings) {
+  const current = await fetchDashboardSettingsBundle()
+  const { supabase, user } = await getAuthenticatedClient()
+  const payload = buildUserSettingsRow(user.id, settings, current.preferences)
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .upsert(payload)
+    .select('*')
+    .single()
+
+  if (error) {
+    throw error
   }
 
-  const serialized = JSON.stringify(settings)
-  window.localStorage.setItem(SETTINGS_STORAGE_KEY, serialized)
-  cachedSettingsRaw = serialized
-  cachedSettingsSnapshot = settings
-  emitStorageChange()
+  return {
+    settings: mapSettingsRow(data),
+    preferences: mapPreferencesRow(data),
+  }
 }
 
-export function subscribeDashboardStorage(onStoreChange: () => void) {
-  if (!hasWindow()) {
-    return () => {}
+export async function saveAccountPreferences(preferences: AccountPreferences) {
+  const current = await fetchDashboardSettingsBundle()
+  const { supabase, user } = await getAuthenticatedClient()
+  const payload = buildUserSettingsRow(user.id, current.settings, preferences)
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .upsert(payload)
+    .select('*')
+    .single()
+
+  if (error) {
+    throw error
   }
 
-  const handleStorage = () => onStoreChange()
-  window.addEventListener(DASHBOARD_STORAGE_EVENT, handleStorage)
-  window.addEventListener('storage', handleStorage)
-
-  return () => {
-    window.removeEventListener(DASHBOARD_STORAGE_EVENT, handleStorage)
-    window.removeEventListener('storage', handleStorage)
+  return {
+    settings: mapSettingsRow(data),
+    preferences: mapPreferencesRow(data),
   }
+}
+
+export async function fetchPortfolioHoldings() {
+  const { supabase, user } = await getAuthenticatedClient()
+  const { data, error } = await supabase
+    .from('portfolio_holdings')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw error
+  }
+
+  return (data ?? []).map((row) => mapHoldingRow(row as Record<string, unknown>))
+}
+
+export async function createPortfolioHolding(holding: Omit<PortfolioHolding, 'id'>) {
+  const { supabase, user } = await getAuthenticatedClient()
+  const payload = {
+    user_id: user.id,
+    name: holding.name,
+    ticker: holding.ticker,
+    shares: holding.shares,
+    average_price: holding.averagePrice,
+    current_price: holding.currentPrice,
+    account_type: holding.accountType,
+  }
+
+  const { error } = await supabase.from('portfolio_holdings').insert(payload)
+
+  if (error) {
+    throw error
+  }
+
+  return fetchPortfolioHoldings()
+}
+
+export async function deletePortfolioHolding(id: string) {
+  const { supabase, user } = await getAuthenticatedClient()
+  const { error } = await supabase
+    .from('portfolio_holdings')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    throw error
+  }
+
+  return fetchPortfolioHoldings()
+}
+
+export async function replacePortfolioHoldings(holdings: Omit<PortfolioHolding, 'id'>[]) {
+  const { supabase, user } = await getAuthenticatedClient()
+  const { error: deleteError } = await supabase
+    .from('portfolio_holdings')
+    .delete()
+    .eq('user_id', user.id)
+
+  if (deleteError) {
+    throw deleteError
+  }
+
+  if (holdings.length > 0) {
+    const payload = holdings.map((holding) => ({
+      user_id: user.id,
+      name: holding.name,
+      ticker: holding.ticker,
+      shares: holding.shares,
+      average_price: holding.averagePrice,
+      current_price: holding.currentPrice,
+      account_type: holding.accountType,
+    }))
+
+    const { error: insertError } = await supabase.from('portfolio_holdings').insert(payload)
+
+    if (insertError) {
+      throw insertError
+    }
+  }
+
+  return fetchPortfolioHoldings()
+}
+
+export function getDataErrorMessage(message?: string) {
+  if (!message) {
+    return 'Noe gikk galt. Prøv igjen.'
+  }
+
+  if (message.includes('relation') || message.includes('does not exist')) {
+    return 'Databasetabellene mangler i Supabase. Kjør oppdatert SQL-skjema først.'
+  }
+
+  if (message.includes('row-level security') || message.includes('permission denied')) {
+    return 'Supabase avviste forespørselen. Kontroller RLS-policyene for brukertabellene.'
+  }
+
+  if (message.includes('JWT') || message.includes('session')) {
+    return 'Økten din er utløpt. Logg inn på nytt og prøv igjen.'
+  }
+
+  return 'Noe gikk galt. Prøv igjen.'
 }
 
 export function calculatePortfolioSummary(

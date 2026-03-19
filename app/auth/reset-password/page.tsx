@@ -7,9 +7,10 @@ import SetupNotice from '@/components/SetupNotice'
 import { hasPublicSupabaseEnv } from '@/lib/env'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
+const authConfigured = hasPublicSupabaseEnv()
+
 export default function ResetPasswordPage() {
   const router = useRouter()
-  const authConfigured = hasPublicSupabaseEnv()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,7 +31,7 @@ export default function ResetPasswordPage() {
     }
 
     if (password.length < 8) {
-      setError('Passordet må være minst 8 tegn.')
+      setError('Passordet ma vare minst 8 tegn.')
       return
     }
 
@@ -39,7 +40,7 @@ export default function ResetPasswordPage() {
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
-      setError('Kunne ikke oppdatere passordet. Lenken kan ha utløpt. Be om en ny.')
+      setError('Kunne ikke oppdatere passordet. Lenken kan ha utlopt. Be om en ny.')
       setLoading(false)
       return
     }
@@ -63,7 +64,7 @@ export default function ResetPasswordPage() {
         {!authConfigured ? (
           <SetupNotice
             title="Supabase er ikke konfigurert"
-            description="Legg inn de offentlige Supabase-verdiene for å bruke passordreset."
+            description="Legg inn de offentlige Supabase-verdiene for a bruke passordreset."
             actionHref="/auth/login"
             actionLabel="Tilbake til innlogging"
           />
@@ -73,9 +74,9 @@ export default function ResetPasswordPage() {
 
             {done ? (
               <div className="auth-success">
-                <div className="auth-success-icon">✓</div>
+                <div className="auth-success-icon">OK</div>
                 <h3>Passord oppdatert</h3>
-                <p>Du blir nå sendt videre til dashboardet.</p>
+                <p>Du blir na sendt videre til dashboardet.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="auth-form">
@@ -86,7 +87,7 @@ export default function ResetPasswordPage() {
                     type="password"
                     placeholder="Minst 8 tegn"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(event) => setPassword(event.target.value)}
                     required
                     autoComplete="new-password"
                   />
@@ -98,7 +99,7 @@ export default function ResetPasswordPage() {
                     type="password"
                     placeholder="Gjenta passord"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
                     required
                     autoComplete="new-password"
                   />

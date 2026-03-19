@@ -4,28 +4,22 @@ import type { User } from '@supabase/supabase-js'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { hasPublicSupabaseEnv } from '@/lib/env'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
 export default function DashboardTopBar({
   user,
-  isDemoMode,
 }: {
-  user?: User
-  isDemoMode: boolean
+  user: User
 }) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
-  const supabase =
-    !isDemoMode && hasPublicSupabaseEnv() ? createBrowserSupabaseClient() : null
 
-  const initials = (user?.email ?? 'D')[0].toUpperCase()
-  const displayEmail = user?.email ?? 'demo@compoundiq.local'
+  const initials = (user.email ?? 'U')[0].toUpperCase()
+  const displayEmail = user.email ?? 'ukjent@compoundiq.no'
 
   async function signOut() {
-    if (supabase) {
-      await supabase.auth.signOut()
-    }
+    const supabase = createBrowserSupabaseClient()
+    await supabase.auth.signOut()
 
     router.push('/')
     router.refresh()
@@ -33,11 +27,7 @@ export default function DashboardTopBar({
 
   return (
     <header className="dash-topbar">
-      <div className="dash-topbar-left">
-        {isDemoMode ? (
-          <span className="dash-demo-copy">Demo mode without Supabase</span>
-        ) : null}
-      </div>
+      <div className="dash-topbar-left" />
 
       <div className="dash-topbar-right">
         <div className="dash-user-menu">
@@ -54,9 +44,7 @@ export default function DashboardTopBar({
               <div className="dash-user-dropdown">
                 <div className="dash-user-info">
                   <span className="dash-user-email">{displayEmail}</span>
-                  <span className="dash-user-plan">
-                    {isDemoMode ? 'Local demo' : 'Gratis plan'}
-                  </span>
+                  <span className="dash-user-plan">Gratis plan</span>
                 </div>
                 <div className="dash-dropdown-divider" />
                 <Link
@@ -78,7 +66,7 @@ export default function DashboardTopBar({
                   className="dash-dropdown-item dash-dropdown-signout"
                   onClick={signOut}
                 >
-                  {isDemoMode ? 'Til forsiden' : 'Logg ut'}
+                  Logg ut
                 </button>
               </div>
               <div

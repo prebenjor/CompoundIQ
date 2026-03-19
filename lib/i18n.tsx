@@ -29,22 +29,28 @@ const translations: Record<Lang, Translations> = {
     'features-subtitle':
       'Kalkulatorer og scenarioverktøy tilpasset norske skatteregler, uten finansiell rådgivning.',
     'feat-nordnet-title': 'Renterente-kalkulator',
+    'feat-nordnet-icon': 'Vekst',
     'feat-nordnet-desc':
       'Juster startbeløp, sparing, avkastning og tidshorisont, og se effekten umiddelbart.',
     'feat-nordnet-tag': 'Gratis å bruke',
     'feat-oslobors-title': 'Skatteeffekt',
+    'feat-oslobors-icon': 'Skatt',
     'feat-oslobors-desc':
       'Se hvordan skatt, inflasjon og tid på markedet påvirker den reelle avkastningen.',
     'feat-ask-title': 'ASK og BSU-planlegging',
+    'feat-ask-icon': 'ASK',
     'feat-ask-desc':
       'Sammenlign ASK, BSU og skattepliktig sparing med en modell som er enkel å justere.',
     'feat-news-title': 'Kontosammenligning',
+    'feat-news-icon': 'Konto',
     'feat-news-desc':
       'Sammenlign ulike kontotyper side ved side og se hvilket oppsett som passer deg best.',
     'feat-calc-title': 'Scenarioverktøy',
+    'feat-calc-icon': 'Plan',
     'feat-calc-desc':
       'Test hva som skjer hvis du sparer mer, endrer avkastning eller justerer inflasjonen.',
     'feat-scenario-title': 'Lagre og eksporter',
+    'feat-scenario-icon': 'Lagre',
     'feat-scenario-desc':
       'Neste steg er lagring, eksport og integrasjoner. Dashboardet viser allerede retningen.',
     'calc-tag': 'Kalkulator',
@@ -92,7 +98,7 @@ const translations: Record<Lang, Translations> = {
     'how-tag': 'Slik fungerer det',
     'how-title': 'Kom i gang på 3 steg',
     'step-1-title': 'Opprett konto',
-    'step-1-desc': 'Registrer deg gratis eller bruk dashboardet i demo mode.',
+    'step-1-desc': 'Registrer deg gratis og logg inn for a bygge portefoljen din.',
     'step-2-title': 'Legg inn tallene dine',
     'step-2-desc': 'Fyll inn sparing, tid og avkastning, eller legg inn portefølje manuelt.',
     'step-3-title': 'Test scenarioer',
@@ -184,22 +190,28 @@ const translations: Record<Lang, Translations> = {
     'features-subtitle':
       'Calculators and planning tools built around Norwegian tax rules without pretending to be financial advice.',
     'feat-nordnet-title': 'Compound interest calculator',
+    'feat-nordnet-icon': 'Grow',
     'feat-nordnet-desc':
       'Adjust starting amount, savings rate, return and time horizon, then see the effect immediately.',
     'feat-nordnet-tag': 'Free to use',
     'feat-oslobors-title': 'Tax impact',
+    'feat-oslobors-icon': 'Tax',
     'feat-oslobors-desc':
       'See how taxes, inflation and time in the market shape your real return.',
     'feat-ask-title': 'ASK and BSU planning',
+    'feat-ask-icon': 'ASK',
     'feat-ask-desc':
       'Compare ASK, BSU and taxable investing with a model you can adjust yourself.',
     'feat-news-title': 'Account comparison',
+    'feat-news-icon': 'Mix',
     'feat-news-desc':
       'Compare different account types side by side and see which setup fits you best.',
     'feat-calc-title': 'Scenario tools',
+    'feat-calc-icon': 'Plan',
     'feat-calc-desc':
       'Test what happens if you save more, change expected return or raise inflation.',
     'feat-scenario-title': 'Save and export',
+    'feat-scenario-icon': 'Save',
     'feat-scenario-desc':
       'The roadmap includes saved scenarios, exports and integrations, and the dashboard already points there.',
     'calc-tag': 'Calculator',
@@ -247,7 +259,7 @@ const translations: Record<Lang, Translations> = {
     'how-tag': 'How it works',
     'how-title': 'Get started in 3 steps',
     'step-1-title': 'Create your account',
-    'step-1-desc': 'Sign up for free or open the dashboard in demo mode.',
+    'step-1-desc': 'Sign up for free and log in to build your portfolio.',
     'step-2-title': 'Enter your numbers',
     'step-2-desc': 'Add savings assumptions or build a manual portfolio.',
     'step-3-title': 'Test scenarios',

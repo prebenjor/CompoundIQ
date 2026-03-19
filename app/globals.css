@@ -1052,6 +1052,13 @@ img {
   align-items: flex-start;
 }
 
+.plan-feature-check {
+  color: #22c55e;
+  font-weight: 800;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
 /* === CTA Section === */
 .cta-section {
   padding: 48px 0 96px;
@@ -2579,6 +2586,16 @@ img {
   font-size: 0.9rem;
 }
 
+.auth-success-inline {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(16,185,129,0.35);
+  background: rgba(16,185,129,0.08);
+  color: #86efac;
+  font-size: 0.9rem;
+}
+
 .portfolio-list,
 .insight-list,
 .dash-checklist {
@@ -2644,6 +2661,90 @@ img {
   line-height: 1.6;
 }
 
+.settings-toggle-list,
+.settings-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-toggle-card,
+.settings-action-card,
+.mfa-setup-card {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.settings-toggle-card,
+.settings-action-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+}
+
+.settings-toggle-card {
+  cursor: pointer;
+}
+
+.settings-toggle-title,
+.settings-inline-label {
+  display: block;
+  color: var(--text);
+  font-size: 0.96rem;
+  margin-bottom: 4px;
+}
+
+.settings-toggle-switch {
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.settings-toggle-switch.active {
+  background: rgba(99,102,241,0.32);
+  border-color: rgba(129,140,248,0.45);
+}
+
+.settings-toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--white);
+  transition: transform 0.2s ease;
+}
+
+.settings-toggle-switch.active .settings-toggle-knob {
+  transform: translateX(22px);
+}
+
+.mfa-setup-card {
+  margin-top: 12px;
+}
+
+.mfa-qr {
+  width: 176px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px 0 16px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 16px;
+}
+
 @media (max-width: 900px) {
   .calc-stats-row,
   .dash-stats-three,
@@ -2660,6 +2761,12 @@ img {
   .dashboard-form-row,
   .account-selector {
     grid-template-columns: 1fr;
+  }
+
+  .settings-toggle-card,
+  .settings-action-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .result-hero {

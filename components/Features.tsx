@@ -34,12 +34,17 @@ export default function Features() {
   }, [])
 
   const features = [
-    { icon: 'Calc', titleKey: 'feat-nordnet-title', descKey: 'feat-nordnet-desc', tagKey: 'feat-nordnet-tag' },
-    { icon: 'Tax', titleKey: 'feat-oslobors-title', descKey: 'feat-oslobors-desc' },
-    { icon: 'ASK', titleKey: 'feat-ask-title', descKey: 'feat-ask-desc' },
-    { icon: 'Mix', titleKey: 'feat-news-title', descKey: 'feat-news-desc' },
-    { icon: 'Plan', titleKey: 'feat-calc-title', descKey: 'feat-calc-desc' },
-    { icon: 'Save', titleKey: 'feat-scenario-title', descKey: 'feat-scenario-desc' },
+    {
+      iconKey: 'feat-nordnet-icon',
+      titleKey: 'feat-nordnet-title',
+      descKey: 'feat-nordnet-desc',
+      tagKey: 'feat-nordnet-tag',
+    },
+    { iconKey: 'feat-oslobors-icon', titleKey: 'feat-oslobors-title', descKey: 'feat-oslobors-desc' },
+    { iconKey: 'feat-ask-icon', titleKey: 'feat-ask-title', descKey: 'feat-ask-desc' },
+    { iconKey: 'feat-news-icon', titleKey: 'feat-news-title', descKey: 'feat-news-desc' },
+    { iconKey: 'feat-calc-icon', titleKey: 'feat-calc-title', descKey: 'feat-calc-desc' },
+    { iconKey: 'feat-scenario-icon', titleKey: 'feat-scenario-title', descKey: 'feat-scenario-desc' },
   ]
 
   return (
@@ -53,7 +58,7 @@ export default function Features() {
         <div className="features-grid">
           {features.map((feature) => (
             <div key={feature.titleKey} className="feature-card">
-              <div className="feature-icon">{feature.icon}</div>
+              <div className="feature-icon">{t(feature.iconKey)}</div>
               <h3>{t(feature.titleKey)}</h3>
               <p>{t(feature.descKey)}</p>
               {feature.tagKey ? <div className="feature-tag">{t(feature.tagKey)}</div> : null}

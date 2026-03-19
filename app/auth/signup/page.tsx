@@ -6,8 +6,9 @@ import SetupNotice from '@/components/SetupNotice'
 import { hasPublicSupabaseEnv } from '@/lib/env'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
+const authConfigured = hasPublicSupabaseEnv()
+
 export default function SignupPage() {
-  const authConfigured = hasPublicSupabaseEnv()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -69,17 +70,17 @@ export default function SignupPage() {
         {!authConfigured ? (
           <SetupNotice
             title="Supabase er ikke konfigurert"
-            description="Du kan fortsatt bruke dashboardet i demo mode, men ekte innlogging krever offentlige Supabase-verdier."
-            actionHref="/dashboard"
-            actionLabel="Apne demo-dashboard"
+            description="Oppretting av konto krever NEXT_PUBLIC_SUPABASE_URL og NEXT_PUBLIC_SUPABASE_ANON_KEY i miljoet."
+            actionHref="/auth/login"
+            actionLabel="Tilbake til innlogging"
           />
         ) : success ? (
           <div className="auth-success">
             <div className="auth-success-icon">Mail</div>
             <h3>Bekreft e-posten din</h3>
             <p>
-              Vi sendte en bekreftelseslenke til <strong>{email}</strong>. Klikk pa lenken for
-              a aktivere kontoen din.
+              Vi sendte en bekreftelseslenke til <strong>{email}</strong>. Klikk pa lenken for a
+              aktivere kontoen din.
             </p>
             <Link
               href="/auth/login"

@@ -7,19 +7,18 @@ import SetupNotice from '@/components/SetupNotice'
 import { hasPublicSupabaseEnv } from '@/lib/env'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
+const authConfigured = hasPublicSupabaseEnv()
+
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/dashboard'
   const errorParam = searchParams.get('error')
-  const authConfigured = hasPublicSupabaseEnv()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(
-    getErrorMessage(errorParam)
-  )
+  const [error, setError] = useState<string | null>(getErrorMessage(errorParam))
   const [success, setSuccess] = useState(false)
 
   async function handleLogin(event: React.FormEvent) {
@@ -60,6 +59,7 @@ function LoginForm() {
 
     setLoading(true)
     setError(null)
+
     const supabase = createBrowserSupabaseClient()
     const { error: magicError } = await supabase.auth.signInWithOtp({
       email,
@@ -94,17 +94,17 @@ function LoginForm() {
         {!authConfigured ? (
           <SetupNotice
             title="Supabase er ikke konfigurert"
-            description="Auth er satt opp, men prosjektet mangler de offentlige Supabase-verdiene. Dashboardet fungerer fortsatt i demo mode."
-            actionHref="/dashboard"
-            actionLabel="Apne demo-dashboard"
+            description="Innlogging krever NEXT_PUBLIC_SUPABASE_URL og NEXT_PUBLIC_SUPABASE_ANON_KEY. Legg inn miljovariablene for a aktivere autentisering."
+            actionHref="/"
+            actionLabel="Tilbake til forsiden"
           />
         ) : success ? (
           <div className="auth-success">
             <div className="auth-success-icon">Mail</div>
             <h3>Sjekk e-posten din</h3>
             <p>
-              Vi sendte en innloggingslenke til <strong>{email}</strong>. Klikk pa lenken for
-              a logge inn.
+              Vi sendte en innloggingslenke til <strong>{email}</strong>. Klikk pa lenken for a
+              logge inn.
             </p>
           </div>
         ) : (
@@ -171,7 +171,13 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="auth-page"><div className="auth-card" /></div>}>
+    <Suspense
+      fallback={
+        <div className="auth-page">
+          <div className="auth-card" />
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   )
@@ -183,7 +189,7 @@ function getErrorMessage(errorParam: string | null) {
   }
 
   if (errorParam === 'missing_config') {
-    return 'Supabase mangler miljoverdier. Bruk demo-dashboardet eller legg inn konfigurasjon.'
+    return 'Supabase mangler miljovariabler. Legg inn konfigurasjonen for a bruke innlogging.'
   }
 
   if (errorParam === 'auth_callback_failed') {

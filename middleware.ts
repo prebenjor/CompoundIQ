@@ -4,8 +4,15 @@ import { createMiddlewareClient } from '@/lib/supabase-middleware'
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request })
+  const { pathname } = request.nextUrl
 
   if (!hasPublicSupabaseEnv()) {
+    if (pathname.startsWith('/dashboard')) {
+      const loginUrl = new URL('/auth/login', request.url)
+      loginUrl.searchParams.set('error', 'missing_config')
+      return NextResponse.redirect(loginUrl)
+    }
+
     return response
   }
 
@@ -13,7 +20,6 @@ export async function middleware(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl
 
   if (pathname.startsWith('/dashboard') && !user) {
     const loginUrl = new URL('/auth/login', request.url)

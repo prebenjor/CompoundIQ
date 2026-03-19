@@ -6,8 +6,9 @@ import SetupNotice from '@/components/SetupNotice'
 import { hasPublicSupabaseEnv } from '@/lib/env'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
+const authConfigured = hasPublicSupabaseEnv()
+
 export default function ForgotPasswordPage() {
-  const authConfigured = hasPublicSupabaseEnv()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +29,7 @@ export default function ForgotPasswordPage() {
     })
 
     if (resetError) {
-      setError('Noe gikk galt. Sjekk at e-postadressen er riktig og prøv igjen.')
+      setError('Noe gikk galt. Sjekk at e-postadressen er riktig og prov igjen.')
       setLoading(false)
       return
     }
@@ -46,12 +47,12 @@ export default function ForgotPasswordPage() {
         </Link>
 
         <h1 className="auth-title">Glemt passord?</h1>
-        <p className="auth-subtitle">Vi sender deg en lenke for å tilbakestille passordet.</p>
+        <p className="auth-subtitle">Vi sender deg en lenke for a tilbakestille passordet.</p>
 
         {!authConfigured ? (
           <SetupNotice
             title="Supabase er ikke konfigurert"
-            description="Legg inn NEXT_PUBLIC_SUPABASE_URL og NEXT_PUBLIC_SUPABASE_ANON_KEY for å aktivere passordreset."
+            description="Legg inn NEXT_PUBLIC_SUPABASE_URL og NEXT_PUBLIC_SUPABASE_ANON_KEY for a aktivere passordreset."
             actionHref="/auth/login"
             actionLabel="Tilbake til innlogging"
           />
@@ -61,7 +62,7 @@ export default function ForgotPasswordPage() {
 
             {sent ? (
               <div className="auth-success">
-                <div className="auth-success-icon">✉</div>
+                <div className="auth-success-icon">Mail</div>
                 <h3>Sjekk e-posten din</h3>
                 <p>
                   Vi sendte en tilbakestillingslenke til <strong>{email}</strong>. Lenken er
@@ -85,7 +86,7 @@ export default function ForgotPasswordPage() {
                       type="email"
                       placeholder="deg@eksempel.no"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(event) => setEmail(event.target.value)}
                       required
                       autoComplete="email"
                     />

@@ -1,16 +1,19 @@
 'use client'
 
-import { useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   calculatePortfolioSummary,
+  createPortfolioHolding,
   defaultDashboardSettings,
+  deletePortfolioHolding,
+  fetchDashboardSettingsBundle,
+  fetchPortfolioHoldings,
   formatCurrency,
   formatPercent,
-  loadDashboardSettings,
-  loadPortfolioHoldings,
+  getDataErrorMessage,
+  replacePortfolioHoldings,
   sampleHoldings,
-  savePortfolioHoldings,
-  subscribeDashboardStorage,
+  type DashboardSettings,
   type HoldingAccount,
   type PortfolioHolding,
 } from '@/lib/dashboard-data'
@@ -27,32 +30,63 @@ const emptyForm = {
 }
 
 export default function PortfolioManager() {
-  const holdings = useSyncExternalStore(
-    subscribeDashboardStorage,
-    loadPortfolioHoldings,
-    () => sampleHoldings
-  )
-  const settings = useSyncExternalStore(
-    subscribeDashboardStorage,
-    loadDashboardSettings,
-    () => defaultDashboardSettings
-  )
+  const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
+  const [settings, setSettings] = useState<DashboardSettings>(defaultDashboardSettings)
   const [form, setForm] = useState(emptyForm)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadData() {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const [portfolio, bundle] = await Promise.all([
+          fetchPortfolioHoldings(),
+          fetchDashboardSettingsBundle(),
+        ])
+
+        if (!active) {
+          return
+        }
+
+        setHoldings(portfolio)
+        setSettings(bundle.settings)
+      } catch (loadError) {
+        if (!active) {
+          return
+        }
+
+        const message =
+          loadError instanceof Error ? getDataErrorMessage(loadError.message) : getDataErrorMessage()
+        setError(message)
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    void loadData()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const summary = useMemo(
     () => calculatePortfolioSummary(holdings, settings),
     [holdings, settings]
   )
 
-  function updateHoldings(next: PortfolioHolding[]) {
-    savePortfolioHoldings(next)
-  }
-
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const nextHolding: PortfolioHolding = {
-      id: `${Date.now()}`,
+    const nextHolding: Omit<PortfolioHolding, 'id'> = {
       name: form.name.trim(),
       ticker: form.ticker.trim().toUpperCase(),
       shares: Number(form.shares),
@@ -67,23 +101,76 @@ export default function PortfolioManager() {
       nextHolding.averagePrice <= 0 ||
       nextHolding.currentPrice <= 0
     ) {
+      setError('Fyll inn gyldige verdier for posisjonen før du lagrer.')
       return
     }
 
-    updateHoldings([nextHolding, ...holdings])
-    setForm(emptyForm)
+    setSaving(true)
+    setError(null)
+
+    try {
+      const next = await createPortfolioHolding(nextHolding)
+      setHoldings(next)
+      setForm(emptyForm)
+    } catch (saveError) {
+      const message =
+        saveError instanceof Error ? getDataErrorMessage(saveError.message) : getDataErrorMessage()
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function removeHolding(id: string) {
-    updateHoldings(holdings.filter((holding) => holding.id !== id))
+  async function removeHolding(id: string) {
+    setSaving(true)
+    setError(null)
+
+    try {
+      const next = await deletePortfolioHolding(id)
+      setHoldings(next)
+    } catch (removeError) {
+      const message =
+        removeError instanceof Error
+          ? getDataErrorMessage(removeError.message)
+          : getDataErrorMessage()
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function loadExamplePortfolio() {
-    updateHoldings(sampleHoldings)
+  async function loadExamplePortfolio() {
+    setSaving(true)
+    setError(null)
+
+    try {
+      const next = await replacePortfolioHoldings(sampleHoldings)
+      setHoldings(next)
+    } catch (sampleError) {
+      const message =
+        sampleError instanceof Error
+          ? getDataErrorMessage(sampleError.message)
+          : getDataErrorMessage()
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function clearPortfolio() {
-    updateHoldings([])
+  async function clearPortfolio() {
+    setSaving(true)
+    setError(null)
+
+    try {
+      const next = await replacePortfolioHoldings([])
+      setHoldings(next)
+    } catch (clearError) {
+      const message =
+        clearError instanceof Error ? getDataErrorMessage(clearError.message) : getDataErrorMessage()
+      setError(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -92,26 +179,42 @@ export default function PortfolioManager() {
         <div>
           <h1 className="dash-title">Portefølje</h1>
           <p className="dash-subtitle">
-            Legg inn beholdningene dine manuelt. Data lagres lokalt i nettleseren.
+            Legg inn beholdningene dine manuelt. Data lagres på brukeren din i Supabase.
           </p>
         </div>
         <div className="dash-actions">
-          <button type="button" className="btn btn-outline" onClick={loadExamplePortfolio}>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={loadExamplePortfolio}
+            disabled={saving}
+          >
             Last eksempeldata
           </button>
-          <button type="button" className="btn btn-ghost" onClick={clearPortfolio}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={clearPortfolio}
+            disabled={saving}
+          >
             Tøm alt
           </button>
         </div>
       </div>
 
+      {error ? <div className="auth-error">{error}</div> : null}
+
       <div className="dash-stats dash-stats-three">
-        <MetricCard label="Markedsverdi" value={formatCurrency(summary.totalValue)} />
+        <MetricCard label="Markedsverdi" value={loading ? 'Laster...' : formatCurrency(summary.totalValue)} />
         <MetricCard
           label="Urealisert gevinst"
-          value={`${formatCurrency(summary.totalGain)} (${formatPercent(summary.totalGainPct)})`}
+          value={
+            loading
+              ? 'Laster...'
+              : `${formatCurrency(summary.totalGain)} (${formatPercent(summary.totalGainPct)})`
+          }
         />
-        <MetricCard label="ASK-andel" value={formatPercent(summary.askShare)} />
+        <MetricCard label="ASK-andel" value={loading ? 'Laster...' : formatPercent(summary.askShare)} />
       </div>
 
       <div className="dashboard-grid">
@@ -206,15 +309,17 @@ export default function PortfolioManager() {
                 />
               </label>
             </div>
-            <button type="submit" className="btn btn-primary">
-              Legg til posisjon
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Lagrer...' : 'Legg til posisjon'}
             </button>
           </form>
         </div>
 
         <div className="dashboard-panel">
           <h2 className="dash-section-title">Beholdninger</h2>
-          {holdings.length === 0 ? (
+          {loading ? (
+            <p className="panel-copy">Laster porteføljen din...</p>
+          ) : holdings.length === 0 ? (
             <p className="panel-copy">
               Ingen posisjoner registrert ennå. Last eksempeldata eller legg inn første posisjon.
             </p>
@@ -246,7 +351,8 @@ export default function PortfolioManager() {
                     <button
                       type="button"
                       className="btn btn-ghost btn-sm"
-                      onClick={() => removeHolding(holding.id)}
+                      onClick={() => void removeHolding(holding.id)}
+                      disabled={saving}
                     >
                       Fjern
                     </button>

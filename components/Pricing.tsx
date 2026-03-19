@@ -54,7 +54,12 @@ export default function Pricing() {
             <p className="plan-desc">{t('plan-free-desc')}</p>
             <ul className="plan-features">
               {freeFeatures.map((feature) => (
-                <li key={feature}>OK <span>{t(`plan-free-${feature}`)}</span></li>
+                <li key={feature}>
+                  <span className="plan-feature-check" aria-hidden="true">
+                    ✓
+                  </span>
+                  <span>{t(`plan-free-${feature}`)}</span>
+                </li>
               ))}
             </ul>
             <a href="#waitlist" className="btn btn-outline btn-full">{t('plan-free-cta')}</a>
@@ -71,7 +76,12 @@ export default function Pricing() {
             <p className="plan-desc">{t('plan-pro-desc')}</p>
             <ul className="plan-features">
               {proFeatures.map((feature) => (
-                <li key={feature}>OK <span>{t(`plan-pro-${feature}`)}</span></li>
+                <li key={feature}>
+                  <span className="plan-feature-check" aria-hidden="true">
+                    ✓
+                  </span>
+                  <span>{t(`plan-pro-${feature}`)}</span>
+                </li>
               ))}
             </ul>
             <a href="#waitlist" className="btn btn-primary btn-full">{t('plan-pro-cta')}</a>

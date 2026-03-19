@@ -13,16 +13,15 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const isDemoMode = !hasPublicSupabaseEnv()
-  let user = null
-
-  if (!isDemoMode) {
-    const supabase = await createSupabaseServerClient()
-    const result = await supabase.auth.getUser()
-    user = result.data.user
+  if (!hasPublicSupabaseEnv()) {
+    redirect('/auth/login?error=missing_config')
   }
 
-  if (!isDemoMode && !user) {
+  const supabase = await createSupabaseServerClient()
+  const result = await supabase.auth.getUser()
+  const user = result.data.user
+
+  if (!user) {
     redirect('/auth/login')
   }
 
@@ -30,7 +29,7 @@ export default async function DashboardLayout({
     <div className="dashboard-root">
       <DashboardSidebar />
       <div className="dashboard-main">
-        <DashboardTopBar user={user ?? undefined} isDemoMode={isDemoMode} />
+        <DashboardTopBar user={user} />
         <main className="dashboard-content">{children}</main>
       </div>
     </div>
