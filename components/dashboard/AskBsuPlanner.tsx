@@ -1,6 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  fetchBudgetSavingsThread,
+  formatBudgetCurrency,
+  type BudgetSavingsThread,
+} from '@/lib/budget-data'
 import { formatCurrency } from '@/lib/dashboard-data'
 
 const ASK_TAX_RATE = 0.3784
@@ -47,6 +52,33 @@ export default function AskBsuPlanner() {
   const [monthlySavings, setMonthlySavings] = useState(3000)
   const [expectedReturn, setExpectedReturn] = useState(8)
   const [comparisonYears, setComparisonYears] = useState(10)
+  const [budgetThread, setBudgetThread] = useState<BudgetSavingsThread | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadBudgetThread() {
+      try {
+        const thread = await fetchBudgetSavingsThread()
+
+        if (!active) {
+          return
+        }
+
+        setBudgetThread(thread)
+      } catch {
+        if (active) {
+          setBudgetThread(null)
+        }
+      }
+    }
+
+    void loadBudgetThread()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   const bsuProjection = useMemo(() => {
     const projectedBalance = projectAnnualSavings(
@@ -89,6 +121,15 @@ export default function AskBsuPlanner() {
     }
   }, [comparisonYears, expectedReturn, initialInvestment, monthlySavings])
 
+  function applyBudgetThread() {
+    if (!budgetThread) {
+      return
+    }
+
+    setMonthlySavings(Math.round(budgetThread.availableToInvest))
+    setAnnualContribution(Math.min(27500, Math.round(budgetThread.availableToBsu * 12)))
+  }
+
   return (
     <div className="dash-page">
       <div className="dash-header">
@@ -99,6 +140,48 @@ export default function AskBsuPlanner() {
           </p>
         </div>
       </div>
+
+      {budgetThread ? (
+        <div className="dashboard-panel budget-thread-panel">
+          <div className="dash-header-row">
+            <h2 className="dash-section-title">Fra budsjett til fordeling</h2>
+            <button type="button" className="btn btn-outline btn-sm" onClick={applyBudgetThread}>
+              Bruk budsjettfordeling
+            </button>
+          </div>
+          <div className="dash-stats dash-stats-three">
+            <div className="stat-card">
+              <span className="stat-label">Til BSU per maaned</span>
+              <span className="stat-value stat-value-lg">
+                {formatBudgetCurrency(budgetThread.availableToBsu)}
+              </span>
+              <span className="stat-hint">
+                {budgetThread.bsuAllocationPct.toFixed(0)} % av overskuddet, opptil{' '}
+                {formatBudgetCurrency(budgetThread.availableToBsu * 12)} i aaret.
+              </span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Til buffer per maaned</span>
+              <span className="stat-value stat-value-lg">
+                {formatBudgetCurrency(budgetThread.availableToBuffer)}
+              </span>
+              <span className="stat-hint">
+                {budgetThread.bufferAllocationPct.toFixed(0)} % holdes igjen som trygg reserve.
+              </span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Til investering per maaned</span>
+              <span className="stat-value stat-value-lg">
+                {formatBudgetCurrency(budgetThread.availableToInvest)}
+              </span>
+              <span className="stat-hint">
+                {budgetThread.investmentAllocationPct.toFixed(0)} % kan brukes direkte i
+                ASK-sammenligningen under.
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="dashboard-grid">
         <div className="dashboard-panel">

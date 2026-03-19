@@ -1,6 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  fetchBudgetSavingsThread,
+  formatBudgetCurrency,
+  type BudgetSavingsThread,
+} from '@/lib/budget-data'
 import { useLang } from '@/lib/i18n'
 
 type AccountType = 'ask' | 'vanlig' | 'bank'
@@ -288,6 +293,8 @@ export default function Calculator({
   const [result, setResult] = useState<CalcResult | null>(null)
   const [showTable, setShowTable] = useState(false)
   const [norskKpi, setNorskKpi] = useState<{ rate: number; period: string } | null>(null)
+  const [budgetThread, setBudgetThread] = useState<BudgetSavingsThread | null>(null)
+  const [useBudgetSync, setUseBudgetSync] = useState(false)
 
   useEffect(() => {
     fetch('/api/inflation')
@@ -299,6 +306,36 @@ export default function Calculator({
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!isDashboard) {
+      return
+    }
+
+    let active = true
+
+    async function loadBudgetThread() {
+      try {
+        const thread = await fetchBudgetSavingsThread()
+
+        if (!active) {
+          return
+        }
+
+        setBudgetThread(thread)
+      } catch {
+        if (active) {
+          setBudgetThread(null)
+        }
+      }
+    }
+
+    void loadBudgetThread()
+
+    return () => {
+      active = false
+    }
+  }, [isDashboard])
 
   const runCalc = useCallback(() => {
     setResult(
@@ -416,6 +453,37 @@ export default function Calculator({
               </div>
               <p className="tax-note">{t(taxNoteKey)}</p>
             </div>
+
+            {isDashboard && budgetThread ? (
+              <div className="budget-sync-card">
+                <div className="budget-sync-copy">
+                  <strong>Budsjettkobling</strong>
+                  <p>
+                    Du kan sette av {formatBudgetCurrency(budgetThread.availableToSave)} i maaneden.
+                    Av dette er {formatBudgetCurrency(budgetThread.availableToInvest)} foreslaatt til
+                    investering med dagens fordeling pÃ¥{' '}
+                    {budgetThread.investmentAllocationPct.toFixed(0)} %.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`btn ${useBudgetSync ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => {
+                    if (!budgetThread) {
+                      return
+                    }
+
+                    if (!useBudgetSync) {
+                      setMonthly(Math.round(budgetThread.availableToInvest))
+                    }
+
+                    setUseBudgetSync((current) => !current)
+                  }}
+                >
+                  {useBudgetSync ? 'Bruker budsjettall' : 'Bruk budsjettoverskudd'}
+                </button>
+              </div>
+            ) : null}
 
             <InputField
               id="principal"

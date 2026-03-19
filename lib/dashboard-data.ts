@@ -16,6 +16,9 @@ export interface DashboardSettings {
   monthlyContribution: number
   expectedReturn: number
   inflation: number
+  bufferAllocationPct: number
+  bsuAllocationPct: number
+  investmentAllocationPct: number
 }
 
 export interface AccountPreferences {
@@ -40,6 +43,9 @@ interface UserSettingsRow {
   monthly_contribution: number
   expected_return: number
   inflation: number
+  buffer_allocation_pct: number
+  bsu_allocation_pct: number
+  investment_allocation_pct: number
   weekly_digest: boolean
   tax_reminders: boolean
   product_updates: boolean
@@ -51,6 +57,9 @@ export const defaultDashboardSettings: DashboardSettings = {
   monthlyContribution: 3000,
   expectedReturn: 8,
   inflation: 2.5,
+  bufferAllocationPct: 20,
+  bsuAllocationPct: 30,
+  investmentAllocationPct: 50,
 }
 
 export const defaultAccountPreferences: AccountPreferences = {
@@ -94,6 +103,11 @@ function mapSettingsRow(row?: Partial<UserSettingsRow> | null): DashboardSetting
       row?.monthly_contribution ?? defaultDashboardSettings.monthlyContribution,
     expectedReturn: row?.expected_return ?? defaultDashboardSettings.expectedReturn,
     inflation: row?.inflation ?? defaultDashboardSettings.inflation,
+    bufferAllocationPct:
+      row?.buffer_allocation_pct ?? defaultDashboardSettings.bufferAllocationPct,
+    bsuAllocationPct: row?.bsu_allocation_pct ?? defaultDashboardSettings.bsuAllocationPct,
+    investmentAllocationPct:
+      row?.investment_allocation_pct ?? defaultDashboardSettings.investmentAllocationPct,
   }
 }
 
@@ -117,6 +131,9 @@ function buildUserSettingsRow(
     monthly_contribution: settings.monthlyContribution,
     expected_return: settings.expectedReturn,
     inflation: settings.inflation,
+    buffer_allocation_pct: settings.bufferAllocationPct,
+    bsu_allocation_pct: settings.bsuAllocationPct,
+    investment_allocation_pct: settings.investmentAllocationPct,
     weekly_digest: preferences.weeklyDigest,
     tax_reminders: preferences.taxReminders,
     product_updates: preferences.productUpdates,
@@ -404,4 +421,12 @@ export function formatCurrency(value: number) {
 
 export function formatPercent(value: number) {
   return `${value.toFixed(1).replace('.', ',')} %`
+}
+
+export function getBudgetAllocationTotal(settings: DashboardSettings) {
+  return (
+    settings.bufferAllocationPct +
+    settings.bsuAllocationPct +
+    settings.investmentAllocationPct
+  )
 }

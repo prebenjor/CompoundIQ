@@ -5,6 +5,7 @@ import {
   defaultDashboardSettings,
   fetchDashboardSettingsBundle,
   formatCurrency,
+  getBudgetAllocationTotal,
   getDataErrorMessage,
   saveAccountPreferences,
   saveDashboardSettings,
@@ -25,6 +26,15 @@ interface PendingTotpEnrollment {
   qrCode: string
   secret: string
   uri: string
+}
+
+interface MfaListFactorsResult {
+  data?: {
+    all?: MfaFactor[]
+  } | null
+  error?: {
+    message?: string
+  } | null
 }
 
 const preferenceFields: Array<{
@@ -187,6 +197,8 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
     [mfaFactors]
   )
 
+  const allocationTotal = getBudgetAllocationTotal(draft)
+
   function updateSetting<K extends keyof DashboardSettings>(
     key: K,
     value: DashboardSettings[K]
@@ -197,6 +209,16 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const nextAllocationTotal = getBudgetAllocationTotal(draft)
+
+    if (nextAllocationTotal <= 0 || nextAllocationTotal > 100) {
+      setDataError(
+        'Fordelingen fra budsjett må være over 0 % og kan ikke overstige 100 % totalt.'
+      )
+      setSettingsMessage(null)
+      return
+    }
+
     setSettingsSaving(true)
     setDataError(null)
     setSettingsMessage(null)
@@ -318,30 +340,72 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
     setNextAalLevel(aalResult.data?.nextLevel ?? null)
   }
 
+  async function clearUnverifiedTotpFactor(factorsResult?: MfaListFactorsResult) {
+    const supabase = createBrowserSupabaseClient()
+    const resolvedFactorsResult =
+      factorsResult ?? ((await supabase.auth.mfa.listFactors()) as MfaListFactorsResult)
+
+    const unverifiedFactor = (resolvedFactorsResult.data?.all ?? []).find(
+      (factor) => factor.factor_type === 'totp' && factor.status === 'unverified'
+    )
+
+    if (!unverifiedFactor) {
+      return
+    }
+
+    const unenrollResult = await supabase.auth.mfa.unenroll({ factorId: unverifiedFactor.id })
+
+    if (unenrollResult.error) {
+      throw unenrollResult.error
+    }
+
+    setPendingTotp(null)
+    setTotpCode('')
+    await refreshMfaState()
+  }
+
   async function startTotpEnrollment() {
     const supabase = createBrowserSupabaseClient()
     setMfaActionLoading(true)
     setMfaError(null)
     setMfaMessage(null)
 
-    const { data, error } = await supabase.auth.mfa.enroll({
+    let enrollment = await supabase.auth.mfa.enroll({
       factorType: 'totp',
       friendlyName: 'CompoundIQ Authenticator',
     })
 
-    if (error || !data) {
-      setMfaError(getMfaErrorMessage(error?.message))
+    if (enrollment.error && isExistingTotpEnrollmentError(enrollment.error.message)) {
+      try {
+        const factorsResult = (await supabase.auth.mfa.listFactors()) as MfaListFactorsResult
+        await clearUnverifiedTotpFactor(factorsResult)
+        enrollment = await supabase.auth.mfa.enroll({
+          factorType: 'totp',
+          friendlyName: 'CompoundIQ Authenticator',
+        })
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : enrollment.error?.message
+        setMfaError(getMfaErrorMessage(message))
+        setMfaActionLoading(false)
+        return
+      }
+    }
+
+    if (enrollment.error || !enrollment.data) {
+      setMfaError(getMfaErrorMessage(enrollment.error?.message))
       setMfaActionLoading(false)
       return
     }
 
     setPendingTotp({
-      factorId: data.id,
-      qrCode: data.totp.qr_code,
-      secret: data.totp.secret,
-      uri: data.totp.uri,
+      factorId: enrollment.data.id,
+      qrCode: enrollment.data.totp.qr_code,
+      secret: enrollment.data.totp.secret,
+      uri: enrollment.data.totp.uri,
     })
     setMfaMessage('Skann QR-koden og bekreft med den 6-sifrede koden fra appen din.')
+    await refreshMfaState()
     setMfaActionLoading(false)
   }
 
@@ -415,6 +479,25 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
     setMfaActionLoading(false)
   }
 
+  async function cancelPendingTotp() {
+    if (!pendingTotp) {
+      return
+    }
+
+    setMfaActionLoading(true)
+    setMfaError(null)
+
+    try {
+      await clearUnverifiedTotpFactor()
+      setMfaMessage('Oppsettet ble avbrutt. Du kan starte MFA-oppsettet på nytt når som helst.')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : undefined
+      setMfaError(getMfaErrorMessage(message))
+    } finally {
+      setMfaActionLoading(false)
+    }
+  }
+
   return (
     <div className="dash-page">
       <div className="dash-header">
@@ -469,6 +552,60 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
                   />
                 </label>
               </div>
+              <div className="settings-allocation-block">
+                <div className="dash-header-row">
+                  <strong className="settings-toggle-title">Fordeling fra budsjett</strong>
+                  <span className="stat-label">Totalt {allocationTotal.toFixed(0)} %</span>
+                </div>
+                <p className="panel-copy">
+                  Velg hvor stort månedlig overskudd som skal foreslås til buffer, BSU og
+                  investering. Resten blir stående som fritt overskudd.
+                </p>
+                <div className="dashboard-form-row dashboard-form-row-three">
+                  <label>
+                    Buffer %
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={draft.bufferAllocationPct}
+                      onChange={(event) =>
+                        updateSetting('bufferAllocationPct', Number(event.target.value))
+                      }
+                    />
+                  </label>
+                  <label>
+                    BSU %
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={draft.bsuAllocationPct}
+                      onChange={(event) =>
+                        updateSetting('bsuAllocationPct', Number(event.target.value))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Investering %
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={draft.investmentAllocationPct}
+                      onChange={(event) =>
+                        updateSetting('investmentAllocationPct', Number(event.target.value))
+                      }
+                    />
+                  </label>
+                </div>
+                <p className="panel-copy">
+                  Standardoppsettet er 20 % buffer, 30 % BSU og 50 % investering.
+                </p>
+              </div>
               <div className="dash-actions">
                 <button type="submit" className="btn btn-primary" disabled={settingsSaving}>
                   {settingsSaving ? 'Lagrer...' : 'Lagre innstillinger'}
@@ -501,6 +638,14 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
             <div className="insight-card">
               <span className="stat-label">Inflasjon</span>
               <strong>{activeSettings.inflation.toFixed(1).replace('.', ',')} %</strong>
+            </div>
+            <div className="insight-card">
+              <span className="stat-label">Budsjettfordeling</span>
+              <strong>
+                {activeSettings.bufferAllocationPct.toFixed(0)} % buffer ·{' '}
+                {activeSettings.bsuAllocationPct.toFixed(0)} % BSU ·{' '}
+                {activeSettings.investmentAllocationPct.toFixed(0)} % investering
+              </strong>
             </div>
           </div>
           <p className="panel-copy">
@@ -700,16 +845,31 @@ export default function SettingsPanel({ userEmail }: { userEmail?: string }) {
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    onClick={() => {
-                      setPendingTotp(null)
-                      setTotpCode('')
-                      setMfaMessage(null)
-                    }}
+                    onClick={() => void cancelPendingTotp()}
+                    disabled={mfaActionLoading}
                   >
                     Avbryt
                   </button>
                 </div>
               </form>
+            </div>
+          ) : hasPendingTotp ? (
+            <div className="settings-action-card">
+              <div>
+                <strong className="settings-toggle-title">MFA-oppsett venter</strong>
+                <p className="panel-copy">
+                  Det finnes allerede et ufullført TOTP-oppsett på kontoen. Start på nytt for å
+                  lage en ny QR-kode og hemmelighet.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void startTotpEnrollment()}
+                disabled={mfaActionLoading || mfaLoading}
+              >
+                {mfaActionLoading ? 'Starter...' : 'Start oppsett på nytt'}
+              </button>
             </div>
           ) : verifiedTotpFactor ? (
             <div className="settings-action-card">
@@ -798,6 +958,18 @@ function getMfaErrorMessage(message?: string) {
   }
 
   return 'Kunne ikke oppdatere tofaktorautentisering.'
+}
+
+function isExistingTotpEnrollmentError(message?: string) {
+  if (!message) {
+    return false
+  }
+
+  return (
+    message.includes('already exists') ||
+    message.includes('already been verified') ||
+    message.includes('unverified factor')
+  )
 }
 
 function normalizeTotpQrSvg(qrCode: string) {

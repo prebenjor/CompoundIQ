@@ -26,9 +26,9 @@ export default function DashboardUpgradePage() {
           <h2 className="dash-section-title">Pro til 29 kr/mnd</h2>
           <ul className="dash-checklist">
             <li>Synkronisering mellom enheter og ubegrensede porteføljer</li>
-            <li>Broker-import, automatisk oppdatering og delbare lenker</li>
+            <li>Bedre CSV-import, delbare lenker og sterkere eksportflyt</li>
             <li>Eksport til PDF, CSV og JSON med rapportmaler</li>
-            <li>Målsporing, varsler, innsikter og husstandsdeling</li>
+            <li>Åpne data-innsikter, målsporing, varsler og husstandsdeling</li>
           </ul>
           <Link href="/dashboard/integrations" className="btn btn-primary">
             Se hva som kommer

@@ -3,6 +3,11 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import {
+  fetchBudgetSavingsThread,
+  formatBudgetCurrency,
+  type BudgetSavingsThread,
+} from '@/lib/budget-data'
+import {
   calculatePortfolioSummary,
   defaultDashboardSettings,
   fetchDashboardSettingsBundle,
@@ -21,6 +26,7 @@ interface DashboardOverviewProps {
 export default function DashboardOverview({ displayName }: DashboardOverviewProps) {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
   const [settings, setSettings] = useState<DashboardSettings>(defaultDashboardSettings)
+  const [budgetThread, setBudgetThread] = useState<BudgetSavingsThread | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,9 +38,10 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
       setError(null)
 
       try {
-        const [portfolio, bundle] = await Promise.all([
+        const [portfolio, bundle, budget] = await Promise.all([
           fetchPortfolioHoldings(),
           fetchDashboardSettingsBundle(),
+          fetchBudgetSavingsThread().catch(() => null),
         ])
 
         if (!active) {
@@ -43,6 +50,7 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
 
         setHoldings(portfolio)
         setSettings(bundle.settings)
+        setBudgetThread(budget)
       } catch (loadError) {
         if (!active) {
           return
@@ -72,7 +80,7 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
       ? `${formatCurrency(summary.totalGain)} (${formatPercent(summary.totalGainPct)})`
       : loading
         ? 'Laster...'
-        : 'Ingen data ennå'
+        : 'Ingen data enda'
 
   return (
     <div className="dash-page">
@@ -81,10 +89,10 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
           <div className="dash-header-row">
             <h1 className="dash-title">Hei, {displayName}</h1>
           </div>
-          <p className="dash-subtitle">Her er oversikten din akkurat nå.</p>
+          <p className="dash-subtitle">Her er oversikten din akkurat naa.</p>
         </div>
         <Link href="/dashboard/portfolio" className="btn btn-primary">
-          + Legg til portefølje
+          + Legg til portefolje
         </Link>
       </div>
 
@@ -92,9 +100,9 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
 
       <div className="dash-stats">
         <StatCard
-          label="Total porteføljeverdi"
+          label="Total portefoljeverdi"
           value={hasHoldings ? formatCurrency(summary.totalValue) : loading ? 'Laster...' : 'Ingen data'}
-          hint="Bygges fra manuelle posisjoner lagret på kontoen din."
+          hint="Bygges fra manuelle posisjoner lagret paa kontoen din."
         />
         <StatCard
           label="Total avkastning"
@@ -102,50 +110,83 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
           hint="Sammenligner kostpris mot estimert markedsverdi."
         />
         <StatCard
-          label="Estimert verdi om 10 år"
+          label="Estimert verdi om 10 aar"
           value={
             hasHoldings ? formatCurrency(summary.projectedValue10y) : loading ? 'Laster...' : 'Ingen data'
           }
-          hint={`Basert på ${settings.expectedReturn.toFixed(1).replace('.', ',')} % forventet avkastning og ${formatCurrency(settings.monthlyContribution)} i månedlig sparing.`}
+          hint={`Basert paa ${settings.expectedReturn.toFixed(1).replace('.', ',')} % forventet avkastning og ${formatCurrency(settings.monthlyContribution)} i maanedlig sparing.`}
         />
         <StatCard
           label="ASK-andel"
           value={hasHoldings ? formatPercent(summary.askShare) : loading ? 'Laster...' : 'Ingen data'}
-          hint="Andel av dagens porteføljeverdi som ligger på ASK."
+          hint="Andel av dagens portefoljeverdi som ligger paa ASK."
         />
+      </div>
+
+      <div className="dashboard-panel budget-thread-panel">
+        <div className="dash-header-row">
+          <h2 className="dash-section-title">Fra budsjett til sparing</h2>
+          <Link href="/dashboard/budget" className="btn btn-ghost btn-sm">
+            Se budsjett
+          </Link>
+        </div>
+        {budgetThread ? (
+          <div className="dash-stats dash-stats-three">
+            <StatCard
+              label="Kan settes av i maaneden"
+              value={formatBudgetCurrency(budgetThread.availableToSave)}
+              hint="Planlagt inntekt minus planlagte utgifter."
+            />
+            <StatCard
+              label="Foreslaatt til investering"
+              value={formatBudgetCurrency(budgetThread.availableToInvest)}
+              hint={`${budgetThread.investmentAllocationPct.toFixed(0)} % av overskuddet sendes videre til investering.`}
+            />
+            <StatCard
+              label="Foreslaatt til buffer og BSU"
+              value={formatBudgetCurrency(
+                budgetThread.availableToBuffer + budgetThread.availableToBsu
+              )}
+              hint={`${(
+                budgetThread.bufferAllocationPct + budgetThread.bsuAllocationPct
+              ).toFixed(0)} % er satt av til buffer og BSU.`}
+            />
+          </div>
+        ) : (
+          <p className="panel-copy">Laster koblingen mellom budsjett og sparing...</p>
+        )}
       </div>
 
       <div className="dash-section">
         <h2 className="dash-section-title">Kom i gang</h2>
         <div className="dash-cards">
           <QuickCard
+            icon="Cash"
+            title="Budsjett"
+            desc="Finn realistisk overskudd hver maaned og send det videre til sparing og investering."
+            href="/dashboard/budget"
+            cta="Apne budsjett"
+          />
+          <QuickCard
             icon="Chart"
             title="Kalkulator"
-            desc="Bruk renters rente-kalkulatoren direkte fra dashboardet."
+            desc="Bruk renters rente-kalkulatoren med sparing hentet fra budsjettet."
             href="/dashboard/calculator"
-            cta="Åpne kalkulator"
+            cta="Apne kalkulator"
           />
           <QuickCard
             icon="Port"
-            title="Portefølje"
-            desc="Legg inn beholdninger, kostpris og nåkurs. Oversikten oppdateres automatisk."
+            title="Portefolje"
+            desc="Legg inn beholdninger, kostpris og naakurs. Oversikten oppdateres automatisk."
             href="/dashboard/portfolio"
-            cta="Se portefølje"
+            cta="Se portefolje"
           />
           <QuickCard
             icon="ASK"
             title="ASK og BSU"
-            desc="Sammenlign ASK mot skattepliktig konto og planlegg BSU-mål med egne satser."
+            desc="Bruk budsjettoverkuddet ditt til aa planlegge BSU, buffer og investering side om side."
             href="/dashboard/ask-bsu"
-            cta="Åpne planner"
-          />
-          <QuickCard
-            icon="Sync"
-            title="Integrasjoner"
-            desc="Se hva som kommer for broker-import og andre koblinger, og meld interesse."
-            href="/dashboard/integrations"
-            cta="Se integrasjoner"
-            badge="Preview"
+            cta="Apne planner"
           />
         </div>
       </div>
@@ -154,9 +195,10 @@ export default function DashboardOverview({ displayName }: DashboardOverviewProp
         <h2 className="dash-section-title">Neste steg</h2>
         <div className="dashboard-panel">
           <ul className="dash-checklist">
-            <li>Legg inn porteføljen din manuelt for å fylle oversikten.</li>
+            <li>Sett opp budsjettet ditt for aa finne realistisk sparekapasitet.</li>
+            <li>Legg inn portefoljen din manuelt for aa fylle oversikten.</li>
             <li>Juster forventet avkastning og inflasjon under innstillinger.</li>
-            <li>Bruk ASK og BSU-planneren for å teste ulike spareoppsett.</li>
+            <li>Bruk ASK og BSU-planneren for aa teste ulike spareoppsett.</li>
           </ul>
         </div>
       </div>
@@ -188,14 +230,12 @@ function QuickCard({
   desc,
   href,
   cta,
-  badge,
 }: {
   icon: string
   title: string
   desc: string
   href: string
   cta: string
-  badge?: string
 }) {
   return (
     <div className="quick-card">
@@ -203,7 +243,6 @@ function QuickCard({
       <div className="quick-card-body">
         <div className="quick-card-title-row">
           <h3>{title}</h3>
-          {badge ? <span className="badge-soon">{badge}</span> : null}
         </div>
         <p>{desc}</p>
       </div>

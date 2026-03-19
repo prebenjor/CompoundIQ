@@ -27,6 +27,9 @@ create table if not exists public.user_settings (
   monthly_contribution numeric(12, 2) not null default 3000,
   expected_return numeric(6, 2) not null default 8,
   inflation numeric(6, 2) not null default 2.5,
+  buffer_allocation_pct numeric(5, 2) not null default 20,
+  bsu_allocation_pct numeric(5, 2) not null default 30,
+  investment_allocation_pct numeric(5, 2) not null default 50,
   weekly_digest boolean not null default true,
   tax_reminders boolean not null default true,
   product_updates boolean not null default false,
@@ -35,6 +38,15 @@ create table if not exists public.user_settings (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table if exists public.user_settings
+  add column if not exists buffer_allocation_pct numeric(5, 2) not null default 20;
+
+alter table if exists public.user_settings
+  add column if not exists bsu_allocation_pct numeric(5, 2) not null default 30;
+
+alter table if exists public.user_settings
+  add column if not exists investment_allocation_pct numeric(5, 2) not null default 50;
 
 -- Manual portfolio positions stored per authenticated user
 create table if not exists public.portfolio_holdings (
@@ -52,6 +64,95 @@ create table if not exists public.portfolio_holdings (
 
 create index if not exists portfolio_holdings_user_id_idx
   on public.portfolio_holdings (user_id, created_at desc);
+
+-- Budget workspaces let users separate personal, household and project budgets
+create table if not exists public.budget_workspaces (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  currency text not null default 'NOK',
+  is_primary boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists budget_workspaces_primary_idx
+  on public.budget_workspaces (user_id)
+  where is_primary = true;
+
+create index if not exists budget_workspaces_user_id_idx
+  on public.budget_workspaces (user_id, created_at desc);
+
+create table if not exists public.budget_periods (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  workspace_id uuid not null references public.budget_workspaces(id) on delete cascade,
+  label text not null,
+  month_start date not null,
+  month_end date not null,
+  status text not null default 'active' check (status in ('draft', 'active', 'closed')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (workspace_id, month_start)
+);
+
+create index if not exists budget_periods_workspace_idx
+  on public.budget_periods (workspace_id, month_start desc);
+
+create table if not exists public.budget_categories (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  workspace_id uuid not null references public.budget_workspaces(id) on delete cascade,
+  name text not null,
+  kind text not null check (kind in ('income', 'expense', 'savings')),
+  budgeted_amount numeric(12, 2) not null default 0,
+  sort_order integer not null default 0,
+  is_default boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (workspace_id, name)
+);
+
+create index if not exists budget_categories_workspace_idx
+  on public.budget_categories (workspace_id, kind, sort_order);
+
+create table if not exists public.budget_rules (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  workspace_id uuid not null references public.budget_workspaces(id) on delete cascade,
+  category_id uuid references public.budget_categories(id) on delete set null,
+  match_type text not null default 'merchant_exact' check (match_type in ('merchant_exact', 'merchant_contains')),
+  pattern text not null,
+  priority integer not null default 100,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists budget_rules_workspace_idx
+  on public.budget_rules (workspace_id, priority asc, created_at asc);
+
+create table if not exists public.budget_transactions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  workspace_id uuid not null references public.budget_workspaces(id) on delete cascade,
+  period_id uuid references public.budget_periods(id) on delete set null,
+  category_id uuid references public.budget_categories(id) on delete set null,
+  transaction_date date not null,
+  merchant text not null,
+  note text not null default '',
+  amount numeric(12, 2) not null check (amount >= 0),
+  kind text not null check (kind in ('income', 'expense', 'savings')),
+  source text not null default 'manual' check (source in ('manual', 'csv_import', 'smart_rule')),
+  import_batch_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists budget_transactions_period_idx
+  on public.budget_transactions (workspace_id, period_id, transaction_date desc);
+
+create index if not exists budget_transactions_category_idx
+  on public.budget_transactions (category_id, transaction_date desc);
 
 create or replace function public.handle_updated_at()
 returns trigger
@@ -76,6 +177,31 @@ create trigger user_settings_updated_at
 drop trigger if exists portfolio_holdings_updated_at on public.portfolio_holdings;
 create trigger portfolio_holdings_updated_at
   before update on public.portfolio_holdings
+  for each row execute procedure public.handle_updated_at();
+
+drop trigger if exists budget_workspaces_updated_at on public.budget_workspaces;
+create trigger budget_workspaces_updated_at
+  before update on public.budget_workspaces
+  for each row execute procedure public.handle_updated_at();
+
+drop trigger if exists budget_periods_updated_at on public.budget_periods;
+create trigger budget_periods_updated_at
+  before update on public.budget_periods
+  for each row execute procedure public.handle_updated_at();
+
+drop trigger if exists budget_categories_updated_at on public.budget_categories;
+create trigger budget_categories_updated_at
+  before update on public.budget_categories
+  for each row execute procedure public.handle_updated_at();
+
+drop trigger if exists budget_rules_updated_at on public.budget_rules;
+create trigger budget_rules_updated_at
+  before update on public.budget_rules
+  for each row execute procedure public.handle_updated_at();
+
+drop trigger if exists budget_transactions_updated_at on public.budget_transactions;
+create trigger budget_transactions_updated_at
+  before update on public.budget_transactions
   for each row execute procedure public.handle_updated_at();
 
 -- Auto-create profile when a new user signs up
@@ -107,6 +233,11 @@ alter table public.waitlist enable row level security;
 alter table public.profiles enable row level security;
 alter table public.user_settings enable row level security;
 alter table public.portfolio_holdings enable row level security;
+alter table public.budget_workspaces enable row level security;
+alter table public.budget_periods enable row level security;
+alter table public.budget_categories enable row level security;
+alter table public.budget_rules enable row level security;
+alter table public.budget_transactions enable row level security;
 
 drop policy if exists "service role only" on public.waitlist;
 create policy "service role only"
@@ -168,5 +299,130 @@ create policy "Users can update own holdings"
 drop policy if exists "Users can delete own holdings" on public.portfolio_holdings;
 create policy "Users can delete own holdings"
   on public.portfolio_holdings
+  for delete
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can view own budget workspaces" on public.budget_workspaces;
+create policy "Users can view own budget workspaces"
+  on public.budget_workspaces
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own budget workspaces" on public.budget_workspaces;
+create policy "Users can insert own budget workspaces"
+  on public.budget_workspaces
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own budget workspaces" on public.budget_workspaces;
+create policy "Users can update own budget workspaces"
+  on public.budget_workspaces
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own budget workspaces" on public.budget_workspaces;
+create policy "Users can delete own budget workspaces"
+  on public.budget_workspaces
+  for delete
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can view own budget periods" on public.budget_periods;
+create policy "Users can view own budget periods"
+  on public.budget_periods
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own budget periods" on public.budget_periods;
+create policy "Users can insert own budget periods"
+  on public.budget_periods
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own budget periods" on public.budget_periods;
+create policy "Users can update own budget periods"
+  on public.budget_periods
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own budget periods" on public.budget_periods;
+create policy "Users can delete own budget periods"
+  on public.budget_periods
+  for delete
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can view own budget categories" on public.budget_categories;
+create policy "Users can view own budget categories"
+  on public.budget_categories
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own budget categories" on public.budget_categories;
+create policy "Users can insert own budget categories"
+  on public.budget_categories
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own budget categories" on public.budget_categories;
+create policy "Users can update own budget categories"
+  on public.budget_categories
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own budget categories" on public.budget_categories;
+create policy "Users can delete own budget categories"
+  on public.budget_categories
+  for delete
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can view own budget rules" on public.budget_rules;
+create policy "Users can view own budget rules"
+  on public.budget_rules
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own budget rules" on public.budget_rules;
+create policy "Users can insert own budget rules"
+  on public.budget_rules
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own budget rules" on public.budget_rules;
+create policy "Users can update own budget rules"
+  on public.budget_rules
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own budget rules" on public.budget_rules;
+create policy "Users can delete own budget rules"
+  on public.budget_rules
+  for delete
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can view own budget transactions" on public.budget_transactions;
+create policy "Users can view own budget transactions"
+  on public.budget_transactions
+  for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert own budget transactions" on public.budget_transactions;
+create policy "Users can insert own budget transactions"
+  on public.budget_transactions
+  for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update own budget transactions" on public.budget_transactions;
+create policy "Users can update own budget transactions"
+  on public.budget_transactions
+  for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can delete own budget transactions" on public.budget_transactions;
+create policy "Users can delete own budget transactions"
+  on public.budget_transactions
   for delete
   using (auth.uid() = user_id);

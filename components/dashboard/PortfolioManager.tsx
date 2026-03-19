@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import {
+  fetchBudgetSavingsThread,
+  formatBudgetCurrency,
+  type BudgetSavingsThread,
+} from '@/lib/budget-data'
+import {
   calculatePortfolioSummary,
   createPortfolioHolding,
   defaultDashboardSettings,
@@ -11,6 +16,7 @@ import {
   formatCurrency,
   formatPercent,
   getDataErrorMessage,
+  projectFutureValue,
   replacePortfolioHoldings,
   sampleHoldings,
   type DashboardSettings,
@@ -32,6 +38,7 @@ const emptyForm = {
 export default function PortfolioManager() {
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([])
   const [settings, setSettings] = useState<DashboardSettings>(defaultDashboardSettings)
+  const [budgetThread, setBudgetThread] = useState<BudgetSavingsThread | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -45,9 +52,10 @@ export default function PortfolioManager() {
       setError(null)
 
       try {
-        const [portfolio, bundle] = await Promise.all([
+        const [portfolio, bundle, budget] = await Promise.all([
           fetchPortfolioHoldings(),
           fetchDashboardSettingsBundle(),
+          fetchBudgetSavingsThread().catch(() => null),
         ])
 
         if (!active) {
@@ -56,6 +64,7 @@ export default function PortfolioManager() {
 
         setHoldings(portfolio)
         setSettings(bundle.settings)
+        setBudgetThread(budget)
       } catch (loadError) {
         if (!active) {
           return
@@ -82,6 +91,18 @@ export default function PortfolioManager() {
     () => calculatePortfolioSummary(holdings, settings),
     [holdings, settings]
   )
+  const budgetProjection10y = useMemo(() => {
+    if (!budgetThread || summary.totalValue <= 0) {
+      return 0
+    }
+
+    return projectFutureValue(
+      summary.totalValue,
+      budgetThread.availableToInvest,
+      settings.expectedReturn,
+      10
+    )
+  }, [budgetThread, settings.expectedReturn, summary.totalValue])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -216,6 +237,41 @@ export default function PortfolioManager() {
         />
         <MetricCard label="ASK-andel" value={loading ? 'Laster...' : formatPercent(summary.askShare)} />
       </div>
+
+      {budgetThread ? (
+        <div className="dashboard-panel budget-thread-panel">
+          <div className="dash-header-row">
+            <h2 className="dash-section-title">Budsjett til investering</h2>
+            <span className="stat-label">
+              {budgetThread.investmentAllocationPct.toFixed(0)} % til investering
+            </span>
+          </div>
+          <div className="dash-stats dash-stats-three">
+            <MetricCard
+              label="Månedlig å investere"
+              value={formatBudgetCurrency(budgetThread.availableToInvest)}
+            />
+            <MetricCard
+              label="Til buffer og BSU"
+              value={formatBudgetCurrency(
+                budgetThread.availableToBuffer + budgetThread.availableToBsu
+              )}
+            />
+            <MetricCard
+              label="Portefølje om 10 år"
+              value={
+                summary.totalValue > 0
+                  ? formatCurrency(budgetProjection10y)
+                  : 'Legg inn posisjoner først'
+              }
+            />
+          </div>
+          <p className="panel-copy">
+            Denne anbefalingen hentes fra budsjettet ditt og bruker fordelingen du har satt i
+            innstillinger.
+          </p>
+        </div>
+      ) : null}
 
       <div className="dashboard-grid">
         <div className="dashboard-panel">

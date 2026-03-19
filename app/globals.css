@@ -2762,12 +2762,165 @@ img {
     height: auto;
 }
 
+.dash-stats-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.budget-toolbar {
+    flex-wrap: wrap;
+}
+
+.budget-import-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.budget-plan-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(99,102,241,0.28);
+    background: rgba(99,102,241,0.1);
+    color: #c7d2fe;
+    font-size: 0.86rem;
+    font-weight: 600;
+}
+
+.budget-insight-list,
+.budget-table,
+.budget-transaction-list {
+    display: grid;
+    gap: 12px;
+}
+
+.budget-insight,
+.budget-helper-card,
+.budget-table-row,
+.budget-transaction-item {
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+}
+
+.budget-insight,
+.budget-helper-card {
+    padding: 16px;
+}
+
+.budget-insight.positive {
+    border-color: rgba(16,185,129,0.28);
+    background: rgba(16,185,129,0.07);
+}
+
+.budget-insight.warning {
+    border-color: rgba(245,158,11,0.28);
+    background: rgba(245,158,11,0.08);
+}
+
+.budget-category-section + .budget-category-section {
+    margin-top: 24px;
+}
+
+.budget-subtitle {
+    font-size: 1rem;
+    color: var(--text);
+}
+
+.budget-table-row {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(120px, 0.8fr) minmax(90px, 0.7fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+}
+
+.budget-table-cell,
+.budget-transaction-main {
+    min-width: 0;
+}
+
+.budget-table-cell-title {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.budget-table-cell-input input {
+    width: 100%;
+}
+
+.budget-table-cell-meta,
+.budget-transaction-count {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.budget-helper-card code {
+    color: var(--text);
+}
+
+.budget-transaction-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px;
+}
+
+.budget-transaction-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.budget-transaction-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.budget-kind-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+}
+
+.budget-kind-pill.income {
+    color: #86efac;
+    border-color: rgba(16,185,129,0.22);
+    background: rgba(16,185,129,0.09);
+}
+
+.budget-kind-pill.expense {
+    color: #fca5a5;
+    border-color: rgba(239,68,68,0.22);
+    background: rgba(239,68,68,0.09);
+}
+
+.budget-kind-pill.savings {
+    color: #93c5fd;
+    border-color: rgba(59,130,246,0.22);
+    background: rgba(59,130,246,0.09);
+}
+
 @media (max-width: 900px) {
-  .calc-stats-row,
-  .dash-stats-three,
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
+    .calc-stats-row,
+    .dash-stats-three,
+    .dash-stats-four,
+    .dashboard-grid,
+    .budget-table-row,
+    .budget-transaction-item {
+      grid-template-columns: 1fr;
+    }
 
   .portfolio-item {
     grid-template-columns: 1fr;
@@ -3518,6 +3671,64 @@ img {
 
 @media (max-width: 560px) {
   .calculator-section-landing .calc-stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.budget-thread-panel {
+  margin-bottom: 28px;
+}
+
+.budget-sync-card {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(16,185,129,0.2);
+  background: rgba(16,185,129,0.07);
+}
+
+.budget-sync-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.budget-sync-copy strong {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.budget-sync-copy p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.settings-allocation-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.02);
+}
+
+.dashboard-form-row-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .budget-sync-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-form-row-three {
     grid-template-columns: 1fr;
   }
 }

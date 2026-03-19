@@ -11,8 +11,8 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'CompoundIQ - Invester smartere i det norske markedet',
   description:
-    'Kraftige investeringsverktoy for det norske markedet. Nordnet-integrasjon, Oslo Bors-data og renterente-kalkulator.',
-  keywords: ['investering', 'Nordnet', 'Oslo Bors', 'rente', 'ASK', 'BSU', 'kalkulator'],
+    'Kraftige investeringsverktoy for det norske markedet. Renterente-kalkulator, budsjett, ASK, BSU og apne data for innsikt.',
+  keywords: ['investering', 'budsjett', 'apne data', 'rente', 'ASK', 'BSU', 'kalkulator'],
   openGraph: {
     title: 'CompoundIQ - Invester smartere i Norge',
     description: 'Portefoljeanalyse og investeringsverktoy for norske investorer.',
